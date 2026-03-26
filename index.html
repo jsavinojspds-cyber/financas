@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Finanças"/>
+<meta name="theme-color" content="#0f172a"/>
+<title>Finanças</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',sans-serif;background:#0f172a;color:#1e293b;overscroll-behavior:none;}
+::-webkit-scrollbar{display:none;}
+input,select,button{font-family:'DM Sans',sans-serif;}
+@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(14px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes sheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet{animation:sheetIn .25s cubic-bezier(.32,.72,0,1);}
+.fade{animation:fadeIn .15s ease;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const{useState,useEffect,useMemo,useRef,useCallback}=React;
+
+const SK="fin-v4";
+const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const TIPOS=["Dinheiro","Cartão","Débito em Conta"];
+const CAT_R=["Duty","Proventos","Aluguel","Comissão","Outros"];
+const CAT_D=["Moradia","Alimentação","Saúde","Educação","Pet","Pessoal","Assinatura","Lazer","Impostos","Outros"];
+
+const hoje=()=>new Date().toISOString().split("T")[0];
+const chave=(y,m)=>`${y}-${String(m+1).padStart(2,"0")}`;
+const labelMes=(y,m)=>`${MESES[m]} ${y}`;
+const proxMes=(y,m)=>m===11?[y+1,0]:[y,m+1];
+const antMes=(y,m)=>m===0?[y-1,11]:[y,m-1];
+
+const avancarData=(s,md)=>{
+  const d=new Date(s+"T00:00:00");
+  const nm=d.getMonth()+md, nf=d.getFullYear()+Math.floor(nm/12), mf=((nm%12)+12)%12;
+  const dia=Math.min(d.getDate(),new Date(nf,mf+1,0).getDate());
+  return`${nf}-${String(mf+1).padStart(2,"0")}-${String(dia).padStart(2,"0")}`;
+};
+const diasAte=v=>{const h=new Date();h.setHours(0,0,0,0);return Math.ceil((new Date(v+"T00:00:00")-h)/864e5);};
+const stL=l=>{if(l.pago)return"pago";const d=diasAte(l.vencimento);return d<0?"vencido":d<=3?"alerta":"pendente";};
+const fmtR=v=>Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const fmtD=s=>new Date(s+"T00:00:00").toLocaleDateString("pt-BR");
+
+const ABRIL=[
+  {id:1,tl:"receita",nome:"Duty",valor:21620,vencimento:"2026-04-05",tp:"Dinheiro",cat:"Duty",pago:false},
+  {id:2,tl:"receita",nome:"Proventos",valor:31.95,vencimento:"2026-04-07",tp:"Dinheiro",cat:"Proventos",pago:false},
+  {id:3,tl:"receita",nome:"Proventos 1ª Quinzena",valor:2943.37,vencimento:"2026-04-15",tp:"Dinheiro",cat:"Proventos",pago:false},
+  {id:4,tl:"receita",nome:"Proventos 2ª Quinzena",valor:1017.74,vencimento:"2026-04-30",tp:"Dinheiro",cat:"Proventos",pago:false},
+  {id:5,tl:"receita",nome:"Aluguel São Jorge",valor:100,vencimento:"2026-04-29",tp:"Dinheiro",cat:"Aluguel",pago:false},
+  {id:6,tl:"receita",nome:"Aluguel Dom Pedro",valor:1500,vencimento:"2026-04-30",tp:"Dinheiro",cat:"Aluguel",pago:false},
+  {id:7,tl:"receita",nome:"Comissão",valor:5043.95,vencimento:"2026-04-30",tp:"Dinheiro",cat:"Comissão",pago:false},
+  {id:8,tl:"despesa",nome:"Energia Mãe",valor:78.08,vencimento:"2026-04-01",tp:"Dinheiro",cat:"Moradia",pago:false},
+  {id:9,tl:"despesa",nome:"Lanche da Julia",valor:400,vencimento:"2026-04-01",tp:"Dinheiro",cat:"Alimentação",pago:false},
+  {id:10,tl:"despesa",nome:"Plano de Saúde",valor:2856.13,vencimento:"2026-04-01",tp:"Dinheiro",cat:"Saúde",pago:false},
+  {id:11,tl:"despesa",nome:"Lavagem Roupa",valor:50,vencimento:"2026-04-01",tp:"Dinheiro",cat:"Pessoal",pago:false},
+  {id:12,tl:"despesa",nome:"Psicóloga",valor:240,vencimento:"2026-04-05",tp:"Dinheiro",cat:"Saúde",pago:false},
+  {id:13,tl:"despesa",nome:"Condomínio Liverpool",valor:814.75,vencimento:"2026-04-05",tp:"Dinheiro",cat:"Moradia",pago:false},
+  {id:14,tl:"despesa",nome:"Personal",valor:115,vencimento:"2026-04-30",tp:"Dinheiro",cat:"Saúde",pago:false},
+  {id:15,tl:"despesa",nome:"TX Adicional Condomínio",valor:50,vencimento:"2026-04-30",tp:"Dinheiro",cat:"Moradia",pago:false},
+  {id:16,tl:"despesa",nome:"Faxina",valor:720,vencimento:"2026-04-05",tp:"Dinheiro",cat:"Pessoal",pago:false},
+  {id:17,tl:"despesa",nome:"Faculdade Júlia",valor:999.99,vencimento:"2026-04-05",tp:"Dinheiro",cat:"Educação",pago:false},
+  {id:18,tl:"despesa",nome:"Apple",valor:129.80,vencimento:"2026-04-22",tp:"Cartão",cat:"Assinatura",pago:false},
+  {id:19,tl:"despesa",nome:"Pilates/Vôlei",valor:285,vencimento:"2026-04-05",tp:"Dinheiro",cat:"Saúde",pago:false},
+  {id:20,tl:"despesa",nome:"Lanche da Lívia",valor:700,vencimento:"2026-04-09",tp:"Dinheiro",cat:"Alimentação",pago:false},
+  {id:21,tl:"despesa",nome:"INSS",valor:550,vencimento:"2026-04-10",tp:"Dinheiro",cat:"Impostos",pago:false},
+  {id:22,tl:"despesa",nome:"Belo Cão",valor:167.75,vencimento:"2026-04-22",tp:"Cartão",cat:"Pet",pago:false},
+  {id:23,tl:"despesa",nome:"Energia Ap",valor:64.50,vencimento:"2026-04-11",tp:"Dinheiro",cat:"Moradia",pago:false},
+  {id:24,tl:"despesa",nome:"TIM Mãe",valor:119.99,vencimento:"2026-04-15",tp:"Débito em Conta",cat:"Pessoal",pago:false},
+  {id:25,tl:"despesa",nome:"Marina",valor:600,vencimento:"2026-04-16",tp:"Dinheiro",cat:"Pessoal",pago:false},
+  {id:26,tl:"despesa",nome:"Vander",valor:70,vencimento:"2026-04-16",tp:"Dinheiro",cat:"Pessoal",pago:false},
+  {id:27,tl:"despesa",nome:"Supermercado",valor:3000,vencimento:"2026-04-22",tp:"Cartão",cat:"Alimentação",pago:false},
+  {id:28,tl:"despesa",nome:"Streaming",valor:113.90,vencimento:"2026-04-22",tp:"Cartão",cat:"Assinatura",pago:false},
+  {id:29,tl:"despesa",nome:"Lucky e Lume",valor:400,vencimento:"2026-04-22",tp:"Cartão",cat:"Pet",pago:false},
+  {id:30,tl:"despesa",nome:"Google One",valor:49.99,vencimento:"2026-04-22",tp:"Cartão",cat:"Assinatura",pago:false},
+  {id:31,tl:"despesa",nome:"Entretenimento",valor:1600,vencimento:"2026-04-22",tp:"Cartão",cat:"Lazer",pago:false},
+  {id:32,tl:"despesa",nome:"Drogaria",valor:1000,vencimento:"2026-04-22",tp:"Cartão",cat:"Saúde",pago:false},
+  {id:33,tl:"despesa",nome:"Seguro King",valor:305.16,vencimento:"2026-04-22",tp:"Cartão",cat:"Outros",pago:false},
+  {id:34,tl:"despesa",nome:"Spotify",valor:40.90,vencimento:"2026-04-22",tp:"Cartão",cat:"Assinatura",pago:false},
+  {id:35,tl:"despesa",nome:"G4",valor:249.75,vencimento:"2026-04-22",tp:"Cartão",cat:"Educação",pago:false},
+  {id:36,tl:"despesa",nome:"Cirurgia do Lucky",valor:461.70,vencimento:"2026-04-22",tp:"Cartão",cat:"Pet",pago:false},
+  {id:37,tl:"despesa",nome:"Contador",valor:600,vencimento:"2026-04-30",tp:"Dinheiro",cat:"Outros",pago:false},
+  {id:38,tl:"despesa",nome:"King",valor:2963.71,vencimento:"2026-04-28",tp:"Dinheiro",cat:"Outros",pago:false},
+  {id:39,tl:"despesa",nome:"Parcela Liverpool",valor:3828.09,vencimento:"2026-04-28",tp:"Débito em Conta",cat:"Moradia",pago:false},
+  {id:40,tl:"despesa",nome:"Vivo",valor:278,vencimento:"2026-04-30",tp:"Dinheiro",cat:"Pessoal",pago:false},
+  {id:41,tl:"despesa",nome:"IPOG",valor:490,vencimento:"2026-04-30",tp:"Dinheiro",cat:"Educação",pago:false},
+  {id:42,tl:"despesa",nome:"Motos",valor:0,vencimento:"2026-04-07",tp:"Dinheiro",cat:"Outros",pago:false},
+];
+
+function App(){
+  const[ano,setAno]=useState(2026);
+  const[mes,setMes]=useState(3);
+  const[todos,setTodos]=useState(null);
+  const[aba,setAba]=useState("resumo");
+  const[filtro,setFiltro]=useState("todos");
+  const[toast,setToast]=useState(null);
+  const[modal,setModal]=useState(false);
+  const[editId,setEditId]=useState(null);
+  const[form,setForm]=useState({tl:"despesa",nome:"",valor:"",vencimento:hoje(),tp:"Dinheiro",cat:"Outros"});
+  const[modoDup,setModoDup]=useState(null);
+  const[selDup,setSelDup]=useState([]);
+  const tRef=useRef(null);
+
+  useEffect(()=>{
+    try{
+      const raw=localStorage.getItem(SK);
+      if(raw) setTodos(JSON.parse(raw));
+      else{const ini={"2026-04":ABRIL};setTodos(ini);localStorage.setItem(SK,JSON.stringify(ini));}
+    }catch{setTodos({"2026-04":ABRIL});}
+  },[]);
+
+  const salvar=d=>{setTodos(d);try{localStorage.setItem(SK,JSON.stringify(d));}catch{}};
+
+  const k=chave(ano,mes);
+  const lista=useMemo(()=>todos?todos[k]||[]:[],[todos,k]);
+  const rec=useMemo(()=>lista.filter(l=>l.tl==="receita"),[lista]);
+  const desp=useMemo(()=>lista.filter(l=>l.tl==="despesa"),[lista]);
+  const totR=useMemo(()=>rec.reduce((s,r)=>s+Number(r.valor),0),[rec]);
+  const totD=useMemo(()=>desp.reduce((s,d)=>s+Number(d.valor),0),[desp]);
+  const recRec=useMemo(()=>rec.filter(r=>r.pago).reduce((s,r)=>s+Number(r.valor),0),[rec]);
+  const despPg=useMemo(()=>desp.filter(d=>d.pago).reduce((s,d)=>s+Number(d.valor),0),[desp]);
+  const saldo=totR-totD;
+  const alertQ=useMemo(()=>lista.filter(l=>stL(l)==="alerta").length,[lista]);
+  const pct=totD>0?Math.round(despPg/totD*100):0;
+  const[ny,nm]=proxMes(ano,mes);
+
+  const listaF=useMemo(()=>{
+    const base=aba==="receitas"?rec:aba==="despesas"?desp:lista;
+    return base.filter(l=>filtro==="todos"||stL(l)===filtro).sort((a,b)=>new Date(a.vencimento)-new Date(b.vencimento));
+  },[lista,aba,filtro,rec,desp]);
+
+  const irMes=dir=>{const[ny2,nm2]=dir===1?proxMes(ano,mes):antMes(ano,mes);setAno(ny2);setMes(nm2);setAba("resumo");setFiltro("todos");};
+
+  const showToast=(msg,fn=null)=>{clearTimeout(tRef.current);setToast({msg,fn});tRef.current=setTimeout(()=>setToast(null),5000);};
+
+  const updLista=nl=>salvar({...todos,[k]:nl});
+  const togglePago=id=>updLista(lista.map(l=>l.id===id?{...l,pago:!l.pago}:l));
+  const excluir=id=>{
+    const prev=[...lista],item=lista.find(l=>l.id===id);
+    updLista(lista.filter(l=>l.id!==id));
+    showToast(`"${item.nome}" excluído`,()=>{updLista(prev);setToast(null);});
+  };
+
+  const abrirNovo=()=>{
+    setEditId(null);
+    setForm({tl:"despesa",nome:"",valor:"",vencimento:`${ano}-${String(mes+1).padStart(2,"0")}-01`,tp:"Dinheiro",cat:"Outros"});
+    setModal(true);
+  };
+  const abrirEditar=l=>{setEditId(l.id);setForm({tl:l.tl,nome:l.nome,valor:l.valor,vencimento:l.vencimento,tp:l.tp,cat:l.cat});setModal(true);};
+  const salvarForm=()=>{
+    if(!form.nome||!form.valor||!form.vencimento)return;
+    const nl=editId?lista.map(l=>l.id===editId?{...l,...form,valor:Number(form.valor)}:l):[...lista,{id:Date.now(),...form,valor:Number(form.valor),pago:false}];
+    updLista(nl);setModal(false);
+  };
+
+  const execDup=ids=>{
+    const orig=lista.filter(l=>ids.includes(l.id));
+    const novos=orig.map(l=>({...l,id:Date.now()+Math.random(),vencimento:avancarData(l.vencimento,1),pago:false}));
+    const dest=todos[chave(ny,nm)]||[];
+    salvar({...todos,[chave(ny,nm)]:[...dest,...novos]});
+    setModoDup(null);setSelDup([]);
+    showToast(`${novos.length} item${novos.length!==1?"s":""} copiado${novos.length!==1?"s":""} para ${labelMes(ny,nm)}`);
+  };
+
+  const badge=l=>{const s=stL(l),d=diasAte(l.vencimento);return{pago:{lb:"Pago",bg:"#d1fae5",co:"#065f46"},vencido:{lb:"Vencido",bg:"#fee2e2",co:"#991b1b"},alerta:{lb:`${d}d`,bg:"#fef3c7",co:"#92400e"},pendente:{lb:`${d}d`,bg:"#eff6ff",co:"#1d4ed8"}}[s];};
+
+  if(!todos)return React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",flexDirection:"column",gap:12,color:"#64748b",background:"#0f172a"}},
+    React.createElement("div",{style:{fontSize:36}},"⏳"),
+    React.createElement("div",{style:{fontWeight:600,color:"#94a3b8"}},"Carregando...")
+  );
+
+  const cats=form.tl==="receita"?CAT_R:CAT_D;
+
+  const Card=({label,total,parcial,label2,cor})=>(
+    <div style={{background:"#fff",borderRadius:14,padding:"13px 15px",border:"1px solid #e2e8f0"}}>
+      <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{label}</div>
+      <div style={{fontSize:17,fontWeight:700,color:cor,marginTop:3,fontFamily:"'DM Mono',monospace"}}>{fmtR(total)}</div>
+      <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{label2}: {fmtR(parcial)}</div>
+    </div>
+  );
+
+  const Item=({l,showEdit=true})=>{
+    const b=badge(l),s=stL(l);
+    return(
+      <div style={{background:"#fff",borderRadius:14,padding:"12px 13px",border:`1px solid ${s==="vencido"?"#fecaca":s==="alerta"?"#fde68a":"#e2e8f0"}`,display:"flex",alignItems:"center",gap:9,opacity:l.pago?0.6:1}}>
+        <button onClick={()=>togglePago(l.id)} style={{width:26,height:26,borderRadius:7,flexShrink:0,border:`2px solid ${l.pago?"#10b981":"#cbd5e1"}`,background:l.pago?"#10b981":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          {l.pago&&<span style={{color:"#fff",fontSize:13,fontWeight:700}}>✓</span>}
+        </button>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:600,fontSize:13,textDecoration:l.pago?"line-through":"none",color:l.pago?"#94a3b8":"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.nome}</div>
+          <div style={{fontSize:11,color:"#94a3b8",marginTop:1}}>{l.tp} · {fmtD(l.vencimento)}</div>
+        </div>
+        <div style={{textAlign:"right",flexShrink:0}}>
+          <div style={{fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace",color:l.pago?"#94a3b8":"#1e293b"}}>{fmtR(l.valor)}</div>
+          <span style={{fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:20,background:b.bg,color:b.co,display:"inline-block",marginTop:2}}>{b.lb}</span>
+        </div>
+        {showEdit&&(
+          <div style={{display:"flex",flexDirection:"column",gap:3,flexShrink:0}}>
+            <button onClick={()=>abrirEditar(l)} style={{background:"#f1f5f9",border:"none",borderRadius:6,padding:"3px 7px",cursor:"pointer",fontSize:11}}>✏️</button>
+            <button onClick={()=>excluir(l.id)} style={{background:"#fff0f0",border:"none",borderRadius:6,padding:"3px 7px",cursor:"pointer",fontSize:11}}>🗑</button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return(
+    <div style={{minHeight:"100vh",background:"#0f172a",paddingBottom:60}}>
+
+      {/* TOAST */}
+      {toast&&(
+        <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:"#1e293b",color:"#fff",borderRadius:14,padding:"13px 18px",display:"flex",alignItems:"center",gap:12,zIndex:300,boxShadow:"0 8px 32px rgba(0,0,0,.4)",minWidth:260,maxWidth:"90vw",animation:"slideUp .2s ease"}}>
+          <span style={{fontSize:13,flex:1}}>{toast.msg}</span>
+          {toast.fn&&<button onClick={toast.fn} style={{background:"#3b82f6",color:"#fff",border:"none",borderRadius:8,padding:"6px 13px",fontWeight:700,fontSize:13,cursor:"pointer",whiteSpace:"nowrap"}}>↩ Desfazer</button>}
+          <button onClick={()=>{clearTimeout(tRef.current);setToast(null);}} style={{background:"transparent",color:"#94a3b8",border:"none",fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+      )}
+
+      {/* HEADER */}
+      <div style={{background:"#0f172a",padding:"52px 18px 0",position:"sticky",top:0,zIndex:20}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+          <button onClick={()=>irMes(-1)} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:10,width:38,height:38,fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:10,color:"#475569",letterSpacing:2,textTransform:"uppercase",fontWeight:700}}>Mês</div>
+            <div style={{fontSize:22,fontWeight:700,color:"#f1f5f9"}}>{labelMes(ano,mes)}</div>
+          </div>
+          <button onClick={()=>irMes(1)} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:10,width:38,height:38,fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+        </div>
+
+        {/* Strip meses */}
+        <div style={{display:"flex",gap:5,overflowX:"auto",padding:"8px 0 0",justifyContent:"center"}}>
+          {MESES.map((m,i)=>{
+            const ativo=i===mes&&ano===2026,tem=!!(todos[chave(2026,i)]?.length);
+            return(
+              <button key={i} onClick={()=>{setAno(2026);setMes(i);setAba("resumo");setFiltro("todos");}} style={{background:ativo?"#3b82f6":"transparent",color:ativo?"#fff":tem?"#94a3b8":"#334155",border:tem&&!ativo?"1px solid #334155":"1px solid transparent",borderRadius:8,padding:"4px 8px",fontWeight:700,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",minWidth:38,position:"relative"}}>
+                {m.slice(0,3)}
+                {tem&&!ativo&&<span style={{position:"absolute",top:2,right:2,width:4,height:4,borderRadius:"50%",background:"#3b82f6",display:"block"}}/>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Abas */}
+        <div style={{display:"flex",gap:2,marginTop:8,alignItems:"center"}}>
+          {["resumo","receitas","despesas"].map(a=>(
+            <button key={a} onClick={()=>setAba(a)} style={{background:"transparent",color:aba===a?"#fff":"#64748b",border:"none",padding:"8px 12px",fontWeight:700,fontSize:13,cursor:"pointer",borderBottom:aba===a?"2px solid #3b82f6":"2px solid transparent",borderRadius:"6px 6px 0 0",textTransform:"capitalize"}}>
+              {a==="resumo"?"Resumo":a==="receitas"?"Receitas":"Despesas"}
+            </button>
+          ))}
+          <div style={{flex:1}}/>
+          <button onClick={abrirNovo} style={{background:"#3b82f6",color:"#fff",border:"none",borderRadius:"8px 8px 0 0",padding:"6px 14px",fontWeight:700,fontSize:13,cursor:"pointer"}}>+ Novo</button>
+        </div>
+      </div>
+
+      {/* CONTEÚDO */}
+      <div style={{background:"#f1f5f9",borderRadius:"16px 16px 0 0",minHeight:"calc(100vh - 200px)",padding:"16px",maxWidth:520,margin:"0 auto"}}>
+
+        {aba==="resumo"&&(
+          <>
+            {/* Saldo */}
+            <div style={{background:saldo>=0?"#f0fdf4":"#fef2f2",border:`1.5px solid ${saldo>=0?"#86efac":"#fca5a5"}`,borderRadius:16,padding:"18px 20px",marginBottom:12,textAlign:"center"}}>
+              <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:2}}>Saldo — {labelMes(ano,mes)}</div>
+              <div style={{fontSize:30,fontWeight:700,fontFamily:"'DM Mono',monospace",color:saldo>=0?"#15803d":"#dc2626"}}>{fmtR(saldo)}</div>
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{saldo<0?"Despesas superam receitas":"No azul ✓"}</div>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+              <Card label="Receitas" total={totR} parcial={recRec} label2="Recebido" cor="#10b981"/>
+              <Card label="Despesas" total={totD} parcial={despPg} label2="Pago" cor="#ef4444"/>
+            </div>
+
+            {/* Barra progresso */}
+            {totD>0&&(
+              <div style={{background:"#fff",borderRadius:14,padding:"13px 15px",border:"1px solid #e2e8f0",marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                  <span style={{fontSize:12,fontWeight:700,color:"#64748b"}}>Progresso de pagamentos</span>
+                  <span style={{fontSize:12,fontWeight:700,color:"#3b82f6"}}>{pct}%</span>
+                </div>
+                <div style={{background:"#f1f5f9",borderRadius:99,height:8,overflow:"hidden"}}>
+                  <div style={{width:`${pct}%`,height:"100%",background:"linear-gradient(90deg,#3b82f6,#10b981)",borderRadius:99,transition:"width .4s ease"}}/>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+                  <span style={{fontSize:11,color:"#94a3b8"}}>Pago: {fmtR(despPg)}</span>
+                  <span style={{fontSize:11,color:"#94a3b8"}}>Restante: {fmtR(totD-despPg)}</span>
+                </div>
+              </div>
+            )}
+
+            {alertQ>0&&(
+              <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"11px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:18}}>⚠️</span>
+                <div style={{fontWeight:700,color:"#92400e",fontSize:13}}>{alertQ} conta{alertQ>1?"s":""} venc{alertQ>1?"em":"e"} nos próximos 3 dias</div>
+              </div>
+            )}
+
+            <div style={{fontWeight:700,fontSize:11,color:"#94a3b8",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Próximos vencimentos</div>
+            <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:20}}>
+              {lista.filter(l=>!l.pago&&diasAte(l.vencimento)>=0).sort((a,b)=>new Date(a.vencimento)-new Date(b.vencimento)).slice(0,6).map(l=>{
+                const b=badge(l);
+                return(
+                  <div key={l.id} style={{background:"#fff",borderRadius:12,padding:"10px 13px",border:"1px solid #e2e8f0",display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:13}}>{l.tl==="receita"?"💚":"🔴"}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.nome}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{fmtD(l.vencimento)} · {l.tp}</div>
+                    </div>
+                    <div style={{fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace",flexShrink:0}}>{fmtR(l.valor)}</div>
+                    <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:b.bg,color:b.co,flexShrink:0}}>{b.lb}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Duplicar */}
+            {lista.length>0&&(
+              <div style={{background:"#fff",borderRadius:16,padding:"16px",border:"1px solid #e2e8f0"}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>📋 Copiar para {labelMes(ny,nm)}</div>
+                <div style={{fontSize:12,color:"#94a3b8",marginBottom:12}}>Duplique os lançamentos deste mês para o próximo</div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{setModoDup("tudo");setSelDup(lista.map(l=>l.id));}} style={{flex:1,padding:"11px",borderRadius:10,border:"none",background:"#3b82f6",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>Copiar tudo</button>
+                  <button onClick={()=>{setModoDup("selecao");setSelDup([]);}} style={{flex:1,padding:"11px",borderRadius:10,border:"1.5px solid #3b82f6",background:"transparent",color:"#3b82f6",fontWeight:700,fontSize:13,cursor:"pointer"}}>Selecionar</button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {(aba==="receitas"||aba==="despesas")&&(
+          <>
+            <div style={{background:"#fff",borderRadius:14,padding:"13px 15px",border:"1px solid #e2e8f0",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total {aba}</div>
+                <div style={{fontSize:19,fontWeight:700,fontFamily:"'DM Mono',monospace",color:aba==="receitas"?"#10b981":"#ef4444",marginTop:2}}>{fmtR(aba==="receitas"?totR:totD)}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{aba==="receitas"?"Recebido":"Pago"}</div>
+                <div style={{fontSize:15,fontWeight:700,fontFamily:"'DM Mono',monospace",color:"#10b981",marginTop:2}}>{fmtR(aba==="receitas"?recRec:despPg)}</div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:6,marginBottom:12,overflowX:"auto"}}>
+              {[{k:"todos",l:"Todos"},{k:"pendente",l:"Pendentes"},{k:"alerta",l:"⚠ Urgentes"},{k:"vencido",l:"Vencidos"},{k:"pago",l:"Pagos"}].map(f=>(
+                <button key={f.k} onClick={()=>setFiltro(f.k)} style={{background:filtro===f.k?"#3b82f6":"#fff",color:filtro===f.k?"#fff":"#64748b",border:"1px solid #e2e8f0",borderRadius:20,padding:"5px 11px",fontWeight:600,fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>{f.l}</button>
+              ))}
+            </div>
+            {listaF.length===0?(
+              <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
+                <div style={{fontSize:40}}>✅</div>
+                <div style={{fontWeight:600,marginTop:8}}>Nenhum lançamento</div>
+              </div>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {listaF.map(l=><Item key={l.id} l={l}/>)}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* MODAL FORM */}
+      {modal&&(
+        <div className="fade" onClick={e=>e.target===e.currentTarget&&setModal(false)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,.65)",zIndex:100,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div className="sheet" style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"22px 18px 44px",width:"100%",maxWidth:520}}>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:14}}>{editId?"Editar lançamento":"Novo lançamento"}</div>
+            <div style={{display:"flex",gap:8,marginBottom:14}}>
+              {["receita","despesa"].map(t=>(
+                <button key={t} onClick={()=>setForm(f=>({...f,tl:t,cat:t==="receita"?"Duty":"Outros"}))} style={{flex:1,padding:"9px",borderRadius:10,border:`2px solid ${form.tl===t?(t==="receita"?"#10b981":"#ef4444"):"#e2e8f0"}`,background:form.tl===t?(t==="receita"?"#f0fdf4":"#fef2f2"):"#f8fafc",color:form.tl===t?(t==="receita"?"#15803d":"#dc2626"):"#94a3b8",fontWeight:700,fontSize:13,cursor:"pointer"}}>{t==="receita"?"💚 Receita":"🔴 Despesa"}</button>
+              ))}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4,textTransform:"uppercase"}}>Nome</label>
+                <input value={form.nome} onChange={e=>setForm(f=>({...f,nome:e.target.value}))} placeholder="Ex: Aluguel, Salário..." style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1.5px solid #e2e8f0",fontSize:14,outline:"none",background:"#f8fafc"}}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4,textTransform:"uppercase"}}>Valor</label>
+                  <input type="number" value={form.valor} onChange={e=>setForm(f=>({...f,valor:e.target.value}))} placeholder="0,00" style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1.5px solid #e2e8f0",fontSize:14,outline:"none",background:"#f8fafc"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4,textTransform:"uppercase"}}>Vencimento</label>
+                  <input type="date" value={form.vencimento} onChange={e=>setForm(f=>({...f,vencimento:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1.5px solid #e2e8f0",fontSize:14,outline:"none",background:"#f8fafc"}}/>
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4,textTransform:"uppercase"}}>Tipo pgto</label>
+                  <select value={form.tp} onChange={e=>setForm(f=>({...f,tp:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1.5px solid #e2e8f0",fontSize:14,background:"#f8fafc"}}>
+                    {TIPOS.map(t=><option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4,textTransform:"uppercase"}}>Categoria</label>
+                  <select value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1.5px solid #e2e8f0",fontSize:14,background:"#f8fafc"}}>
+                    {cats.map(c=><option key={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10,marginTop:18}}>
+              <button onClick={()=>setModal(false)} style={{flex:1,padding:"12px",borderRadius:10,border:"1.5px solid #e2e8f0",background:"#f8fafc",fontWeight:600,fontSize:14,cursor:"pointer",color:"#64748b"}}>Cancelar</button>
+              <button onClick={salvarForm} style={{flex:2,padding:"12px",borderRadius:10,border:"none",background:"#3b82f6",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer"}}>Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DUPLICAR */}
+      {modoDup&&(
+        <div className="fade" onClick={e=>e.target===e.currentTarget&&setModoDup(null)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,.65)",zIndex:100,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div className="sheet" style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"20px 18px 44px",width:"100%",maxWidth:520,maxHeight:"85vh",display:"flex",flexDirection:"column"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <div style={{fontWeight:700,fontSize:16}}>{modoDup==="tudo"?"Copiar tudo":"Selecionar lançamentos"}</div>
+              <button onClick={()=>setModoDup(null)} style={{background:"transparent",border:"none",fontSize:22,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>×</button>
+            </div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:12}}>
+              {modoDup==="tudo"?`${lista.length} lançamentos → `:`${selDup.length} selecionado${selDup.length!==1?"s":""} → `}
+              <strong style={{color:"#3b82f6"}}>{labelMes(ny,nm)}</strong>
+            </div>
+            {modoDup==="selecao"&&(
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <button onClick={()=>setSelDup(lista.map(l=>l.id))} style={{flex:1,padding:"7px",borderRadius:8,border:"1px solid #e2e8f0",background:"#f8fafc",fontWeight:600,fontSize:12,cursor:"pointer",color:"#3b82f6"}}>Selecionar todos</button>
+                <button onClick={()=>setSelDup([])} style={{flex:1,padding:"7px",borderRadius:8,border:"1px solid #e2e8f0",background:"#f8fafc",fontWeight:600,fontSize:12,cursor:"pointer",color:"#64748b"}}>Limpar</button>
+              </div>
+            )}
+            <div style={{overflowY:"auto",flex:1,display:"flex",flexDirection:"column",gap:7,marginBottom:16}}>
+              {[...lista].sort((a,b)=>new Date(a.vencimento)-new Date(b.vencimento)).map(l=>{
+                const sel=modoDup==="tudo"||selDup.includes(l.id);
+                return(
+                  <div key={l.id} onClick={()=>modoDup==="selecao"&&setSelDup(prev=>prev.includes(l.id)?prev.filter(x=>x!==l.id):[...prev,l.id])} style={{background:sel?"#eff6ff":"#f8fafc",border:`1.5px solid ${sel?"#93c5fd":"#e2e8f0"}`,borderRadius:12,padding:"10px 13px",display:"flex",alignItems:"center",gap:10,cursor:modoDup==="selecao"?"pointer":"default"}}>
+                    <div style={{width:20,height:20,borderRadius:6,flexShrink:0,border:`2px solid ${sel?"#3b82f6":"#cbd5e1"}`,background:sel?"#3b82f6":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {sel&&<span style={{color:"#fff",fontSize:12,fontWeight:700}}>✓</span>}
+                    </div>
+                    <span style={{fontSize:13}}>{l.tl==="receita"?"💚":"🔴"}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.nome}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{fmtD(l.vencimento)} · {l.tp}</div>
+                    </div>
+                    <div style={{fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace",flexShrink:0,color:l.tl==="receita"?"#10b981":"#ef4444"}}>{fmtR(l.valor)}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <button disabled={modoDup==="selecao"&&selDup.length===0} onClick={()=>execDup(modoDup==="tudo"?lista.map(l=>l.id):selDup)} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:modoDup==="selecao"&&selDup.length===0?"#e2e8f0":"#3b82f6",color:modoDup==="selecao"&&selDup.length===0?"#94a3b8":"#fff",fontWeight:700,fontSize:15,cursor:modoDup==="selecao"&&selDup.length===0?"not-allowed":"pointer"}}>
+              {modoDup==="tudo"?`Copiar ${lista.length} lançamentos para ${labelMes(ny,nm)}`:selDup.length===0?"Selecione ao menos 1 item":`Copiar ${selDup.length} item${selDup.length!==1?"s":""} para ${labelMes(ny,nm)}`}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("app")).render(React.createElement(App));
+</script>
+
+</body>
+</html>
