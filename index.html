@@ -18,8 +18,12 @@ input,select,button{font-family:'DM Sans',sans-serif;}
 @keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(14px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes sheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+@keyframes pinIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
 .sheet{animation:sheetIn .25s cubic-bezier(.32,.72,0,1);}
 .fade{animation:fadeIn .15s ease;}
+.pin-screen{animation:pinIn .35s cubic-bezier(.32,.72,0,1);}
+.shake{animation:shake .35s ease;}
 </style>
 </head>
 <body>
@@ -35,6 +39,8 @@ input,select,button{font-family:'DM Sans',sans-serif;}
 const{useState,useEffect,useMemo,useRef,useCallback}=React;
 
 const SK="fin-v4";
+const PIN_SK="fin-pin";
+const DEFAULT_PIN="1234";
 const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const TIPOS=["Dinheiro","Cartão","Débito em Conta"];
 const CAT_R=["Duty","Proventos","Aluguel","Comissão","Outros"];
@@ -48,7 +54,7 @@ const antMes=(y,m)=>m===0?[y-1,11]:[y,m-1];
 
 const avancarData=(s,md)=>{
   const d=new Date(s+"T00:00:00");
-  const nm=d.getMonth()+md, nf=d.getFullYear()+Math.floor(nm/12), mf=((nm%12)+12)%12;
+  const nm=d.getMonth()+md,nf=d.getFullYear()+Math.floor(nm/12),mf=((nm%12)+12)%12;
   const dia=Math.min(d.getDate(),new Date(nf,mf+1,0).getDate());
   return`${nf}-${String(mf+1).padStart(2,"0")}-${String(dia).padStart(2,"0")}`;
 };
@@ -102,7 +108,122 @@ const ABRIL=[
   {id:42,tl:"despesa",nome:"Motos",valor:0,vencimento:"2026-04-07",tp:"Dinheiro",cat:"Outros",pago:false},
 ];
 
+/* ─── TELA DE SENHA ─── */
+function PinScreen({onUnlock}){
+  const [digits,setDigits]=useState(["","","",""]);
+  const [erro,setErro]=useState(false);
+  const [shaking,setShaking]=useState(false);
+  const refs=[useRef(),useRef(),useRef(),useRef()];
+
+  useEffect(()=>{
+    setTimeout(()=>refs[0].current&&refs[0].current.focus(),300);
+  },[]);
+
+  const handleChange=(i,v)=>{
+    const d=v.replace(/\D/g,"").slice(-1);
+    const nd=[...digits];
+    nd[i]=d;
+    setDigits(nd);
+    setErro(false);
+    if(d&&i<3) refs[i+1].current.focus();
+    if(d&&i===3){
+      const pin=nd.join("");
+      const saved=localStorage.getItem(PIN_SK)||DEFAULT_PIN;
+      if(pin===saved){
+        onUnlock();
+      }else{
+        setShaking(true);
+        setErro(true);
+        setTimeout(()=>{
+          setDigits(["","","",""]);
+          setShaking(false);
+          refs[0].current.focus();
+        },400);
+      }
+    }
+  };
+
+  const handleKeyDown=(i,e)=>{
+    if(e.key==="Backspace"&&!digits[i]&&i>0){
+      refs[i-1].current.focus();
+    }
+  };
+
+  return(
+    <div style={{
+      minHeight:"100vh",
+      background:"#0f172a",
+      display:"flex",
+      flexDirection:"column",
+      alignItems:"center",
+      justifyContent:"center",
+      padding:"0 32px"
+    }}>
+      <div className="pin-screen" style={{textAlign:"center",width:"100%",maxWidth:320}}>
+        {/* Ícone */}
+        <div style={{
+          width:72,height:72,borderRadius:22,
+          background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          margin:"0 auto 28px",
+          boxShadow:"0 8px 32px rgba(59,130,246,0.4)"
+        }}>
+          <span style={{fontSize:34}}>💰</span>
+        </div>
+
+        <div style={{fontSize:22,fontWeight:700,color:"#f1f5f9",marginBottom:6}}>Finanças</div>
+        <div style={{fontSize:14,color:"#64748b",marginBottom:36}}>Digite sua senha de 4 dígitos</div>
+
+        {/* Campos PIN */}
+        <div className={shaking?"shake":""} style={{display:"flex",gap:14,justifyContent:"center",marginBottom:20}}>
+          {digits.map((d,i)=>(
+            <input
+              key={i}
+              ref={refs[i]}
+              type="tel"
+              inputMode="numeric"
+              maxLength={1}
+              value={d}
+              onChange={e=>handleChange(i,e.target.value)}
+              onKeyDown={e=>handleKeyDown(i,e)}
+              style={{
+                width:58,height:66,
+                borderRadius:16,
+                border:`2px solid ${erro?"#ef4444":d?"#3b82f6":"#1e293b"}`,
+                background:d?"#1e3a5f":"#1e293b",
+                color:"#f1f5f9",
+                fontSize:26,fontWeight:700,
+                textAlign:"center",
+                outline:"none",
+                transition:"all .15s ease",
+                caretColor:"transparent",
+                WebkitTextSecurity:"disc",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Mensagem de erro */}
+        {erro&&(
+          <div style={{
+            fontSize:13,color:"#ef4444",fontWeight:600,
+            animation:"fadeIn .15s ease"
+          }}>
+            Senha incorreta. Tente novamente.
+          </div>
+        )}
+
+        <div style={{marginTop:40,fontSize:12,color:"#334155"}}>
+          Seus dados ficam salvos apenas neste dispositivo
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── APP PRINCIPAL ─── */
 function App(){
+  const[desbloqueado,setDesbloqueado]=useState(false);
   const[ano,setAno]=useState(2026);
   const[mes,setMes]=useState(3);
   const[todos,setTodos]=useState(null);
@@ -117,12 +238,13 @@ function App(){
   const tRef=useRef(null);
 
   useEffect(()=>{
+    if(!desbloqueado)return;
     try{
       const raw=localStorage.getItem(SK);
       if(raw) setTodos(JSON.parse(raw));
       else{const ini={"2026-04":ABRIL};setTodos(ini);localStorage.setItem(SK,JSON.stringify(ini));}
     }catch{setTodos({"2026-04":ABRIL});}
-  },[]);
+  },[desbloqueado]);
 
   const salvar=d=>{setTodos(d);try{localStorage.setItem(SK,JSON.stringify(d));}catch{}};
 
@@ -178,6 +300,9 @@ function App(){
   };
 
   const badge=l=>{const s=stL(l),d=diasAte(l.vencimento);return{pago:{lb:"Pago",bg:"#d1fae5",co:"#065f46"},vencido:{lb:"Vencido",bg:"#fee2e2",co:"#991b1b"},alerta:{lb:`${d}d`,bg:"#fef3c7",co:"#92400e"},pendente:{lb:`${d}d`,bg:"#eff6ff",co:"#1d4ed8"}}[s];};
+
+  /* Mostrar tela de senha */
+  if(!desbloqueado) return React.createElement(PinScreen,{onUnlock:()=>setDesbloqueado(true)});
 
   if(!todos)return React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",flexDirection:"column",gap:12,color:"#64748b",background:"#0f172a"}},
     React.createElement("div",{style:{fontSize:36}},"⏳"),
@@ -272,7 +397,6 @@ function App(){
 
         {aba==="resumo"&&(
           <>
-            {/* Saldo */}
             <div style={{background:saldo>=0?"#f0fdf4":"#fef2f2",border:`1.5px solid ${saldo>=0?"#86efac":"#fca5a5"}`,borderRadius:16,padding:"18px 20px",marginBottom:12,textAlign:"center"}}>
               <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:2}}>Saldo — {labelMes(ano,mes)}</div>
               <div style={{fontSize:30,fontWeight:700,fontFamily:"'DM Mono',monospace",color:saldo>=0?"#15803d":"#dc2626"}}>{fmtR(saldo)}</div>
@@ -284,7 +408,6 @@ function App(){
               <Card label="Despesas" total={totD} parcial={despPg} label2="Pago" cor="#ef4444"/>
             </div>
 
-            {/* Barra progresso */}
             {totD>0&&(
               <div style={{background:"#fff",borderRadius:14,padding:"13px 15px",border:"1px solid #e2e8f0",marginBottom:12}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
@@ -326,7 +449,6 @@ function App(){
               })}
             </div>
 
-            {/* Duplicar */}
             {lista.length>0&&(
               <div style={{background:"#fff",borderRadius:16,padding:"16px",border:"1px solid #e2e8f0"}}>
                 <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>📋 Copiar para {labelMes(ny,nm)}</div>
