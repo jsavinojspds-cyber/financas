@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-
+ 
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
@@ -28,16 +28,14 @@ input,select,button{font-family:'DM Sans',sans-serif;}
 </head>
 <body>
 <div id="app"></div>
-
+ 
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
+ 
 <script type="text/babel">
 const{useState,useEffect,useMemo,useRef,useCallback}=React;
-
+ 
 const SK="fin-v4";
 const PIN_SK="fin-pin";
 const DEFAULT_PIN="1234";
@@ -45,13 +43,13 @@ const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agos
 const TIPOS=["Dinheiro","Cartão","Débito em Conta"];
 const CAT_R=["Duty","Proventos","Aluguel","Comissão","Outros"];
 const CAT_D=["Moradia","Alimentação","Saúde","Educação","Pet","Pessoal","Assinatura","Lazer","Impostos","Outros"];
-
+ 
 const hoje=()=>new Date().toISOString().split("T")[0];
 const chave=(y,m)=>`${y}-${String(m+1).padStart(2,"0")}`;
 const labelMes=(y,m)=>`${MESES[m]} ${y}`;
 const proxMes=(y,m)=>m===11?[y+1,0]:[y,m+1];
 const antMes=(y,m)=>m===0?[y-1,11]:[y,m-1];
-
+ 
 const avancarData=(s,md)=>{
   const d=new Date(s+"T00:00:00");
   const nm=d.getMonth()+md,nf=d.getFullYear()+Math.floor(nm/12),mf=((nm%12)+12)%12;
@@ -62,7 +60,7 @@ const diasAte=v=>{const h=new Date();h.setHours(0,0,0,0);return Math.ceil((new D
 const stL=l=>{if(l.pago)return"pago";const d=diasAte(l.vencimento);return d<0?"vencido":d<=3?"alerta":"pendente";};
 const fmtR=v=>Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const fmtD=s=>new Date(s+"T00:00:00").toLocaleDateString("pt-BR");
-
+ 
 const ABRIL=[
   {id:1,tl:"receita",nome:"Duty",valor:21620,vencimento:"2026-04-05",tp:"Dinheiro",cat:"Duty",pago:false},
   {id:2,tl:"receita",nome:"Proventos",valor:31.95,vencimento:"2026-04-07",tp:"Dinheiro",cat:"Proventos",pago:false},
@@ -107,18 +105,18 @@ const ABRIL=[
   {id:41,tl:"despesa",nome:"IPOG",valor:490,vencimento:"2026-04-30",tp:"Dinheiro",cat:"Educação",pago:false},
   {id:42,tl:"despesa",nome:"Motos",valor:0,vencimento:"2026-04-07",tp:"Dinheiro",cat:"Outros",pago:false},
 ];
-
+ 
 /* ─── TELA DE SENHA ─── */
 function PinScreen({onUnlock}){
   const [digits,setDigits]=useState(["","","",""]);
   const [erro,setErro]=useState(false);
   const [shaking,setShaking]=useState(false);
   const refs=[useRef(),useRef(),useRef(),useRef()];
-
+ 
   useEffect(()=>{
     setTimeout(()=>refs[0].current&&refs[0].current.focus(),300);
   },[]);
-
+ 
   const handleChange=(i,v)=>{
     const d=v.replace(/\D/g,"").slice(-1);
     const nd=[...digits];
@@ -142,85 +140,172 @@ function PinScreen({onUnlock}){
       }
     }
   };
-
+ 
   const handleKeyDown=(i,e)=>{
     if(e.key==="Backspace"&&!digits[i]&&i>0){
       refs[i-1].current.focus();
     }
   };
-
+ 
   return(
-    <div style={{
-      minHeight:"100vh",
-      background:"#0f172a",
-      display:"flex",
-      flexDirection:"column",
-      alignItems:"center",
-      justifyContent:"center",
-      padding:"0 32px"
-    }}>
+    <div style={{minHeight:"100vh",background:"#0f172a",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 32px"}}>
       <div className="pin-screen" style={{textAlign:"center",width:"100%",maxWidth:320}}>
-        {/* Ícone */}
-        <div style={{
-          width:72,height:72,borderRadius:22,
-          background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",
-          display:"flex",alignItems:"center",justifyContent:"center",
-          margin:"0 auto 28px",
-          boxShadow:"0 8px 32px rgba(59,130,246,0.4)"
-        }}>
+        <div style={{width:72,height:72,borderRadius:22,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 28px",boxShadow:"0 8px 32px rgba(59,130,246,0.4)"}}>
           <span style={{fontSize:34}}>💰</span>
         </div>
-
         <div style={{fontSize:22,fontWeight:700,color:"#f1f5f9",marginBottom:6}}>Finanças</div>
         <div style={{fontSize:14,color:"#64748b",marginBottom:36}}>Digite sua senha de 4 dígitos</div>
-
-        {/* Campos PIN */}
         <div className={shaking?"shake":""} style={{display:"flex",gap:14,justifyContent:"center",marginBottom:20}}>
           {digits.map((d,i)=>(
-            <input
-              key={i}
-              ref={refs[i]}
-              type="tel"
-              inputMode="numeric"
-              maxLength={1}
-              value={d}
-              onChange={e=>handleChange(i,e.target.value)}
-              onKeyDown={e=>handleKeyDown(i,e)}
-              style={{
-                width:58,height:66,
-                borderRadius:16,
-                border:`2px solid ${erro?"#ef4444":d?"#3b82f6":"#1e293b"}`,
-                background:d?"#1e3a5f":"#1e293b",
-                color:"#f1f5f9",
-                fontSize:26,fontWeight:700,
-                textAlign:"center",
-                outline:"none",
-                transition:"all .15s ease",
-                caretColor:"transparent",
-                WebkitTextSecurity:"disc",
-              }}
-            />
+            <input key={i} ref={refs[i]} type="tel" inputMode="numeric" maxLength={1} value={d}
+              onChange={e=>handleChange(i,e.target.value)} onKeyDown={e=>handleKeyDown(i,e)}
+              style={{width:58,height:66,borderRadius:16,border:`2px solid ${erro?"#ef4444":d?"#3b82f6":"#1e293b"}`,background:d?"#1e3a5f":"#1e293b",color:"#f1f5f9",fontSize:26,fontWeight:700,textAlign:"center",outline:"none",transition:"all .15s ease",caretColor:"transparent",WebkitTextSecurity:"disc"}}/>
           ))}
         </div>
-
-        {/* Mensagem de erro */}
-        {erro&&(
-          <div style={{
-            fontSize:13,color:"#ef4444",fontWeight:600,
-            animation:"fadeIn .15s ease"
-          }}>
-            Senha incorreta. Tente novamente.
-          </div>
-        )}
-
-        <div style={{marginTop:40,fontSize:12,color:"#334155"}}>
-          Seus dados ficam salvos apenas neste dispositivo
-        </div>
+        {erro&&<div style={{fontSize:13,color:"#ef4444",fontWeight:600,animation:"fadeIn .15s ease"}}>Senha incorreta. Tente novamente.</div>}
+        <div style={{marginTop:40,fontSize:12,color:"#334155"}}>Seus dados ficam salvos apenas neste dispositivo</div>
       </div>
     </div>
   );
 }
-
+ 
+/* ─── ABA FLUXO DE CAIXA ─── */
+function FluxoCaixa({lista}){
+  // Ordena tudo por data e calcula saldo acumulado
+  const fluxo = useMemo(()=>{
+    const itens = [...lista]
+      .filter(l => Number(l.valor) > 0)
+      .sort((a,b) => new Date(a.vencimento)-new Date(b.vencimento));
+ 
+    let saldoAcum = 0;
+    return itens.map(l => {
+      const credito = l.tl==="receita" ? Number(l.valor) : 0;
+      const debito  = l.tl==="despesa" ? Number(l.valor) : 0;
+      saldoAcum += credito - debito;
+      return { ...l, credito, debito, saldoAcum };
+    });
+  }, [lista]);
+ 
+  const totalCred = useMemo(()=>lista.filter(l=>l.tl==="receita").reduce((s,l)=>s+Number(l.valor),0),[lista]);
+  const totalDeb  = useMemo(()=>lista.filter(l=>l.tl==="despesa").reduce((s,l)=>s+Number(l.valor),0),[lista]);
+  const saldoFinal = totalCred - totalDeb;
+ 
+  // Ponto crítico: dia em que o saldo fica mais negativo
+  const minSaldo = fluxo.length ? Math.min(...fluxo.map(f=>f.saldoAcum)) : 0;
+ 
+  if(lista.length===0) return(
+    <div style={{textAlign:"center",padding:"52px 0",color:"#94a3b8"}}>
+      <div style={{fontSize:40}}>📊</div>
+      <div style={{fontWeight:600,marginTop:8}}>Nenhum lançamento neste mês</div>
+    </div>
+  );
+ 
+  return(
+    <div>
+      {/* Cards totais */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <div style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid #e2e8f0"}}>
+          <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total Créditos</div>
+          <div style={{fontSize:16,fontWeight:700,color:"#10b981",marginTop:3,fontFamily:"'DM Mono',monospace"}}>{fmtR(totalCred)}</div>
+        </div>
+        <div style={{background:"#fff",borderRadius:14,padding:"12px 14px",border:"1px solid #e2e8f0"}}>
+          <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total Débitos</div>
+          <div style={{fontSize:16,fontWeight:700,color:"#ef4444",marginTop:3,fontFamily:"'DM Mono',monospace"}}>{fmtR(totalDeb)}</div>
+        </div>
+      </div>
+ 
+      {/* Saldo final */}
+      <div style={{background:saldoFinal>=0?"#f0fdf4":"#fef2f2",border:`1.5px solid ${saldoFinal>=0?"#86efac":"#fca5a5"}`,borderRadius:14,padding:"13px 16px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#64748b"}}>Saldo do mês</div>
+        <div style={{fontSize:18,fontWeight:700,fontFamily:"'DM Mono',monospace",color:saldoFinal>=0?"#15803d":"#dc2626"}}>{fmtR(saldoFinal)}</div>
+      </div>
+ 
+      {/* Alerta ponto crítico */}
+      {minSaldo < 0 && (
+        <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:12,padding:"11px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:16}}>⚠️</span>
+          <div style={{fontSize:13,color:"#991b1b",fontWeight:600}}>Caixa fica negativo em {fmtR(minSaldo)} em algum ponto do mês</div>
+        </div>
+      )}
+ 
+      {/* Legenda */}
+      <div style={{display:"flex",gap:12,marginBottom:10,fontSize:11,color:"#64748b",fontWeight:600}}>
+        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#dcfce7",display:"inline-block",border:"1px solid #86efac"}}/>Crédito</span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#fee2e2",display:"inline-block",border:"1px solid #fca5a5"}}/>Débito</span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#eff6ff",display:"inline-block",border:"1px solid #93c5fd"}}/>Saldo acum.</span>
+      </div>
+ 
+      {/* Tabela */}
+      <div style={{background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",overflow:"hidden"}}>
+        {/* Header */}
+        <div style={{display:"grid",gridTemplateColumns:"60px 1fr 80px 80px 90px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",padding:"9px 10px",gap:4}}>
+          {["Data","Descrição","Crédito","Débito","Saldo"].map((h,i)=>(
+            <div key={i} style={{fontSize:10,fontWeight:700,color:"#94a3b8",letterSpacing:.5,textTransform:"uppercase",textAlign:i>=2?"right":"left"}}>{h}</div>
+          ))}
+        </div>
+ 
+        {/* Linhas */}
+        {fluxo.map((l,idx)=>{
+          const negativo = l.saldoAcum < 0;
+          const critico  = l.saldoAcum === minSaldo && minSaldo < 0;
+          return(
+            <div key={l.id} style={{
+              display:"grid",gridTemplateColumns:"60px 1fr 80px 80px 90px",
+              padding:"9px 10px",gap:4,
+              borderBottom: idx<fluxo.length-1?"1px solid #f1f5f9":"none",
+              background: critico?"#fff7f7": l.pago?"#f8fafc":"#fff",
+              alignItems:"center"
+            }}>
+              {/* Data */}
+              <div style={{fontSize:11,color:"#94a3b8",fontFamily:"'DM Mono',monospace"}}>{fmtD(l.vencimento)}</div>
+ 
+              {/* Descrição */}
+              <div style={{fontSize:12,fontWeight:600,color:l.pago?"#94a3b8":"#1e293b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textDecoration:l.pago?"line-through":"none"}}>
+                {l.nome}
+                {l.pago&&<span style={{fontSize:9,background:"#d1fae5",color:"#065f46",borderRadius:4,padding:"1px 4px",marginLeft:4,fontWeight:700,textDecoration:"none",display:"inline-block"}}>✓</span>}
+              </div>
+ 
+              {/* Crédito */}
+              <div style={{fontSize:11,fontWeight:700,fontFamily:"'DM Mono',monospace",color:"#10b981",textAlign:"right"}}>
+                {l.credito>0 ? fmtR(l.credito) : "—"}
+              </div>
+ 
+              {/* Débito */}
+              <div style={{fontSize:11,fontWeight:700,fontFamily:"'DM Mono',monospace",color:"#ef4444",textAlign:"right"}}>
+                {l.debito>0 ? fmtR(l.debito) : "—"}
+              </div>
+ 
+              {/* Saldo acumulado */}
+              <div style={{
+                fontSize:11,fontWeight:700,fontFamily:"'DM Mono',monospace",
+                color: negativo?"#dc2626":"#15803d",
+                textAlign:"right",
+                background: negativo?"#fef2f2":"#f0fdf4",
+                borderRadius:6,padding:"2px 5px"
+              }}>
+                {fmtR(l.saldoAcum)}
+              </div>
+            </div>
+          );
+        })}
+ 
+        {/* Rodapé totais */}
+        <div style={{display:"grid",gridTemplateColumns:"60px 1fr 80px 80px 90px",padding:"10px 10px",gap:4,background:"#f8fafc",borderTop:"2px solid #e2e8f0",alignItems:"center"}}>
+          <div/>
+          <div style={{fontSize:11,fontWeight:700,color:"#64748b"}}>TOTAL</div>
+          <div style={{fontSize:11,fontWeight:700,fontFamily:"'DM Mono',monospace",color:"#10b981",textAlign:"right"}}>{fmtR(totalCred)}</div>
+          <div style={{fontSize:11,fontWeight:700,fontFamily:"'DM Mono',monospace",color:"#ef4444",textAlign:"right"}}>{fmtR(totalDeb)}</div>
+          <div style={{fontSize:11,fontWeight:700,fontFamily:"'DM Mono',monospace",color:saldoFinal>=0?"#15803d":"#dc2626",textAlign:"right",background:saldoFinal>=0?"#f0fdf4":"#fef2f2",borderRadius:6,padding:"2px 5px"}}>{fmtR(saldoFinal)}</div>
+        </div>
+      </div>
+ 
+      <div style={{fontSize:11,color:"#94a3b8",textAlign:"center",marginTop:10}}>
+        Saldo acumulado considera todos os lançamentos do mês em ordem cronológica
+      </div>
+    </div>
+  );
+}
+ 
 /* ─── APP PRINCIPAL ─── */
 function App(){
   const[desbloqueado,setDesbloqueado]=useState(false);
@@ -236,7 +321,7 @@ function App(){
   const[modoDup,setModoDup]=useState(null);
   const[selDup,setSelDup]=useState([]);
   const tRef=useRef(null);
-
+ 
   useEffect(()=>{
     if(!desbloqueado)return;
     try{
@@ -245,9 +330,9 @@ function App(){
       else{const ini={"2026-04":ABRIL};setTodos(ini);localStorage.setItem(SK,JSON.stringify(ini));}
     }catch{setTodos({"2026-04":ABRIL});}
   },[desbloqueado]);
-
+ 
   const salvar=d=>{setTodos(d);try{localStorage.setItem(SK,JSON.stringify(d));}catch{}};
-
+ 
   const k=chave(ano,mes);
   const lista=useMemo(()=>todos?todos[k]||[]:[],[todos,k]);
   const rec=useMemo(()=>lista.filter(l=>l.tl==="receita"),[lista]);
@@ -260,16 +345,16 @@ function App(){
   const alertQ=useMemo(()=>lista.filter(l=>stL(l)==="alerta").length,[lista]);
   const pct=totD>0?Math.round(despPg/totD*100):0;
   const[ny,nm]=proxMes(ano,mes);
-
+ 
   const listaF=useMemo(()=>{
     const base=aba==="receitas"?rec:aba==="despesas"?desp:lista;
     return base.filter(l=>filtro==="todos"||stL(l)===filtro).sort((a,b)=>new Date(a.vencimento)-new Date(b.vencimento));
   },[lista,aba,filtro,rec,desp]);
-
+ 
   const irMes=dir=>{const[ny2,nm2]=dir===1?proxMes(ano,mes):antMes(ano,mes);setAno(ny2);setMes(nm2);setAba("resumo");setFiltro("todos");};
-
+ 
   const showToast=(msg,fn=null)=>{clearTimeout(tRef.current);setToast({msg,fn});tRef.current=setTimeout(()=>setToast(null),5000);};
-
+ 
   const updLista=nl=>salvar({...todos,[k]:nl});
   const togglePago=id=>updLista(lista.map(l=>l.id===id?{...l,pago:!l.pago}:l));
   const excluir=id=>{
@@ -277,7 +362,7 @@ function App(){
     updLista(lista.filter(l=>l.id!==id));
     showToast(`"${item.nome}" excluído`,()=>{updLista(prev);setToast(null);});
   };
-
+ 
   const abrirNovo=()=>{
     setEditId(null);
     setForm({tl:"despesa",nome:"",valor:"",vencimento:`${ano}-${String(mes+1).padStart(2,"0")}-01`,tp:"Dinheiro",cat:"Outros"});
@@ -289,7 +374,7 @@ function App(){
     const nl=editId?lista.map(l=>l.id===editId?{...l,...form,valor:Number(form.valor)}:l):[...lista,{id:Date.now(),...form,valor:Number(form.valor),pago:false}];
     updLista(nl);setModal(false);
   };
-
+ 
   const execDup=ids=>{
     const orig=lista.filter(l=>ids.includes(l.id));
     const novos=orig.map(l=>({...l,id:Date.now()+Math.random(),vencimento:avancarData(l.vencimento,1),pago:false}));
@@ -298,19 +383,18 @@ function App(){
     setModoDup(null);setSelDup([]);
     showToast(`${novos.length} item${novos.length!==1?"s":""} copiado${novos.length!==1?"s":""} para ${labelMes(ny,nm)}`);
   };
-
+ 
   const badge=l=>{const s=stL(l),d=diasAte(l.vencimento);return{pago:{lb:"Pago",bg:"#d1fae5",co:"#065f46"},vencido:{lb:"Vencido",bg:"#fee2e2",co:"#991b1b"},alerta:{lb:`${d}d`,bg:"#fef3c7",co:"#92400e"},pendente:{lb:`${d}d`,bg:"#eff6ff",co:"#1d4ed8"}}[s];};
-
-  /* Mostrar tela de senha */
+ 
   if(!desbloqueado) return React.createElement(PinScreen,{onUnlock:()=>setDesbloqueado(true)});
-
+ 
   if(!todos)return React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",flexDirection:"column",gap:12,color:"#64748b",background:"#0f172a"}},
     React.createElement("div",{style:{fontSize:36}},"⏳"),
     React.createElement("div",{style:{fontWeight:600,color:"#94a3b8"}},"Carregando...")
   );
-
+ 
   const cats=form.tl==="receita"?CAT_R:CAT_D;
-
+ 
   const Card=({label,total,parcial,label2,cor})=>(
     <div style={{background:"#fff",borderRadius:14,padding:"13px 15px",border:"1px solid #e2e8f0"}}>
       <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{label}</div>
@@ -318,7 +402,7 @@ function App(){
       <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{label2}: {fmtR(parcial)}</div>
     </div>
   );
-
+ 
   const Item=({l,showEdit=true})=>{
     const b=badge(l),s=stL(l);
     return(
@@ -343,10 +427,10 @@ function App(){
       </div>
     );
   };
-
+ 
   return(
     <div style={{minHeight:"100vh",background:"#0f172a",paddingBottom:60}}>
-
+ 
       {/* TOAST */}
       {toast&&(
         <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:"#1e293b",color:"#fff",borderRadius:14,padding:"13px 18px",display:"flex",alignItems:"center",gap:12,zIndex:300,boxShadow:"0 8px 32px rgba(0,0,0,.4)",minWidth:260,maxWidth:"90vw",animation:"slideUp .2s ease"}}>
@@ -355,10 +439,9 @@ function App(){
           <button onClick={()=>{clearTimeout(tRef.current);setToast(null);}} style={{background:"transparent",color:"#94a3b8",border:"none",fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
         </div>
       )}
-
+ 
       {/* HEADER */}
       <div style={{background:"#0f172a",padding:"52px 18px 0",position:"sticky",top:0,zIndex:20}}>
-        {/* Barra superior: Sair e Atualizar */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <button onClick={()=>setDesbloqueado(false)} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
             🔒 <span>Sair</span>
@@ -375,7 +458,7 @@ function App(){
           </div>
           <button onClick={()=>irMes(1)} style={{background:"#1e293b",border:"none",color:"#94a3b8",borderRadius:10,width:38,height:38,fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
         </div>
-
+ 
         {/* Strip meses */}
         <div style={{display:"flex",gap:5,overflowX:"auto",padding:"8px 0 0",justifyContent:"center"}}>
           {MESES.map((m,i)=>{
@@ -388,22 +471,29 @@ function App(){
             );
           })}
         </div>
-
-        {/* Abas */}
-        <div style={{display:"flex",gap:2,marginTop:8,alignItems:"center"}}>
-          {["resumo","receitas","despesas"].map(a=>(
-            <button key={a} onClick={()=>setAba(a)} style={{background:"transparent",color:aba===a?"#fff":"#64748b",border:"none",padding:"8px 12px",fontWeight:700,fontSize:13,cursor:"pointer",borderBottom:aba===a?"2px solid #3b82f6":"2px solid transparent",borderRadius:"6px 6px 0 0",textTransform:"capitalize"}}>
-              {a==="resumo"?"Resumo":a==="receitas"?"Receitas":"Despesas"}
+ 
+        {/* Abas — agora com Fluxo */}
+        <div style={{display:"flex",gap:2,marginTop:8,alignItems:"center",overflowX:"auto"}}>
+          {[
+            {k:"resumo",   l:"Resumo"},
+            {k:"receitas", l:"Receitas"},
+            {k:"despesas", l:"Despesas"},
+            {k:"fluxo",    l:"📊 Fluxo"},
+          ].map(a=>(
+            <button key={a.k} onClick={()=>setAba(a.k)} style={{background:"transparent",color:aba===a.k?"#fff":"#64748b",border:"none",padding:"8px 11px",fontWeight:700,fontSize:12,cursor:"pointer",borderBottom:aba===a.k?"2px solid #3b82f6":"2px solid transparent",borderRadius:"6px 6px 0 0",whiteSpace:"nowrap"}}>
+              {a.l}
             </button>
           ))}
           <div style={{flex:1}}/>
-          <button onClick={abrirNovo} style={{background:"#3b82f6",color:"#fff",border:"none",borderRadius:"8px 8px 0 0",padding:"6px 14px",fontWeight:700,fontSize:13,cursor:"pointer"}}>+ Novo</button>
+          {aba!=="fluxo"&&(
+            <button onClick={abrirNovo} style={{background:"#3b82f6",color:"#fff",border:"none",borderRadius:"8px 8px 0 0",padding:"6px 12px",fontWeight:700,fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>+ Novo</button>
+          )}
         </div>
       </div>
-
+ 
       {/* CONTEÚDO */}
       <div style={{background:"#f1f5f9",borderRadius:"16px 16px 0 0",minHeight:"calc(100vh - 200px)",padding:"16px",maxWidth:520,margin:"0 auto"}}>
-
+ 
         {aba==="resumo"&&(
           <>
             <div style={{background:saldo>=0?"#f0fdf4":"#fef2f2",border:`1.5px solid ${saldo>=0?"#86efac":"#fca5a5"}`,borderRadius:16,padding:"18px 20px",marginBottom:12,textAlign:"center"}}>
@@ -411,12 +501,10 @@ function App(){
               <div style={{fontSize:30,fontWeight:700,fontFamily:"'DM Mono',monospace",color:saldo>=0?"#15803d":"#dc2626"}}>{fmtR(saldo)}</div>
               <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{saldo<0?"Despesas superam receitas":"No azul ✓"}</div>
             </div>
-
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
               <Card label="Receitas" total={totR} parcial={recRec} label2="Recebido" cor="#10b981"/>
               <Card label="Despesas" total={totD} parcial={despPg} label2="Pago" cor="#ef4444"/>
             </div>
-
             {totD>0&&(
               <div style={{background:"#fff",borderRadius:14,padding:"13px 15px",border:"1px solid #e2e8f0",marginBottom:12}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
@@ -432,14 +520,12 @@ function App(){
                 </div>
               </div>
             )}
-
             {alertQ>0&&(
               <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"11px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
                 <span style={{fontSize:18}}>⚠️</span>
                 <div style={{fontWeight:700,color:"#92400e",fontSize:13}}>{alertQ} conta{alertQ>1?"s":""} venc{alertQ>1?"em":"e"} nos próximos 3 dias</div>
               </div>
             )}
-
             <div style={{fontWeight:700,fontSize:11,color:"#94a3b8",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Próximos vencimentos</div>
             <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:20}}>
               {lista.filter(l=>!l.pago&&diasAte(l.vencimento)>=0).sort((a,b)=>new Date(a.vencimento)-new Date(b.vencimento)).slice(0,6).map(l=>{
@@ -457,7 +543,6 @@ function App(){
                 );
               })}
             </div>
-
             {lista.length>0&&(
               <div style={{background:"#fff",borderRadius:16,padding:"16px",border:"1px solid #e2e8f0"}}>
                 <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>📋 Copiar para {labelMes(ny,nm)}</div>
@@ -470,7 +555,7 @@ function App(){
             )}
           </>
         )}
-
+ 
         {(aba==="receitas"||aba==="despesas")&&(
           <>
             <div style={{background:"#fff",borderRadius:14,padding:"13px 15px",border:"1px solid #e2e8f0",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -500,8 +585,12 @@ function App(){
             )}
           </>
         )}
+ 
+        {/* ── ABA FLUXO DE CAIXA ── */}
+        {aba==="fluxo"&&<FluxoCaixa lista={lista}/>}
+ 
       </div>
-
+ 
       {/* MODAL FORM */}
       {modal&&(
         <div className="fade" onClick={e=>e.target===e.currentTarget&&setModal(false)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,.65)",zIndex:100,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
@@ -549,7 +638,7 @@ function App(){
           </div>
         </div>
       )}
-
+ 
       {/* MODAL DUPLICAR */}
       {modoDup&&(
         <div className="fade" onClick={e=>e.target===e.currentTarget&&setModoDup(null)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,.65)",zIndex:100,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
@@ -595,9 +684,10 @@ function App(){
     </div>
   );
 }
-
+ 
 ReactDOM.createRoot(document.getElementById("app")).render(React.createElement(App));
 </script>
-
+ 
 </body>
 </html>
+ 
