@@ -1750,6 +1750,56 @@ function ColarSMS({onAdicionar, catD}) {
   );
 }
 
+
+/* ── IndexedDB Storage (persiste no iOS PWA) ── */
+const IDB_NAME = "financasApp";
+const IDB_STORE = "dados";
+const IDB_VERSION = 1;
+
+function abrirIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e);
+  });
+}
+
+async function idbGet(chaveIDB) {
+  try {
+    const db = await abrirIDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).get(chaveIDB);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  } catch { return null; }
+}
+
+async function idbSet(chaveIDB, valor) {
+  try {
+    const db = await abrirIDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(valor, chaveIDB);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    });
+  } catch { return false; }
+}
+
+function storageGet(k) {
+  try { return localStorage.getItem(k); } catch { return null; }
+}
+
+function storageSet(k, v) {
+  try { localStorage.setItem(k, v); } catch {}
+  idbSet(k, v); // salva no IDB também (assíncrono)
+}
+
 function PinScreen({
   onUnlock
 }) {
@@ -1918,27 +1968,32 @@ function App() {
   const setCatD = novas => {
     setCatDState(novas);
     try {
-      localStorage.setItem(CAT_SK, JSON.stringify(novas));
+      storageSet(CAT_SK, JSON.stringify(novas));
     } catch {}
   };
   useEffect(() => {
     if (!desbloqueado) return;
-    try {
-      const raw = localStorage.getItem(SK);
-      if (raw) setTodos(JSON.parse(raw));else {
-        const ini = {
-          "2026-04": ABRIL
-        };
-        setTodos(ini);
-        localStorage.setItem(SK, JSON.stringify(ini));
+    // Tenta IDB primeiro (mais persistente no iOS), depois localStorage
+    async function carregar() {
+      try {
+        // Tentar IDB
+        let raw = await idbGet(SK);
+        if (!raw) raw = storageGet(SK); // fallback localStorage
+        if (raw) {
+          setTodos(JSON.parse(raw));
+        } else {
+          const ini = {"2026-04": ABRIL};
+          setTodos(ini);
+          storageSet(SK, JSON.stringify(ini));
+        }
+        let rawCat = await idbGet(CAT_SK);
+        if (!rawCat) rawCat = storageGet(CAT_SK);
+        if (rawCat) setCatDState(JSON.parse(rawCat));
+      } catch {
+        setTodos({"2026-04": ABRIL});
       }
-      const rawCat = localStorage.getItem(CAT_SK);
-      if (rawCat) setCatDState(JSON.parse(rawCat));
-    } catch {
-      setTodos({
-        "2026-04": ABRIL
-      });
     }
+    carregar();
   }, [desbloqueado]);
 
   // Limpar busca ao trocar aba
@@ -1948,7 +2003,7 @@ function App() {
   const salvar = d => {
     setTodos(d);
     try {
-      localStorage.setItem(SK, JSON.stringify(d));
+      storageSet(SK, JSON.stringify(d));
     } catch {}
   };
   const k = chave(ano, mes);
@@ -2116,6 +2171,22 @@ function App() {
       }
     };
     reader.readAsText(file);
+  };
+
+
+  const salvarManual = async () => {
+    try {
+      const dadosStr = JSON.stringify(todos);
+      const catStr = JSON.stringify(catD);
+      // Salvar em ambos os storages
+      localStorage.setItem(SK, dadosStr);
+      localStorage.setItem(CAT_SK, catStr);
+      await idbSet(SK, dadosStr);
+      await idbSet(CAT_SK, catStr);
+      showToast("✅ Dados salvos com sucesso!");
+    } catch(e) {
+      showToast("⚠️ Erro ao salvar. Tente novamente.");
+    }
   };
 
   const badge = l => {
@@ -2337,7 +2408,28 @@ function App() {
       background: "#e8e0f0",
       paddingBottom: 60
     }
-  }, toast && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: salvarManual,
+    style: {
+      position: "fixed",
+      bottom: 24,
+      right: 20,
+      zIndex: 290,
+      background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+      color: "#fff",
+      border: "none",
+      borderRadius: 99,
+      padding: "13px 22px",
+      fontWeight: 800,
+      fontSize: 14,
+      cursor: "pointer",
+      boxShadow: "0 4px 20px rgba(124,58,237,0.5)",
+      display: "flex",
+      alignItems: "center",
+      gap: 7,
+      fontFamily: "'DM Sans',sans-serif"
+    }
+  }, "\uD83D\uDCBE ", /*#__PURE__*/React.createElement("span", null, "Salvar")), toast && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
       bottom: 28,
