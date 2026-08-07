@@ -12,10 +12,31 @@ const VERSAO = '2023-06-01';
 const TENTAR_DE_NOVO = new Set([408, 409, 429, 500, 502, 503, 529]);
 
 /**
+ * Monta o content da mensagem com imagens antes do texto.
+ *
+ * A ordem importa: o modelo le melhor quando ve a imagem e so depois a
+ * pergunta sobre ela.
+ *
+ * @param {string} texto
+ * @param {Array<{base64:string, tipo:string}>} imagens
+ */
+export function comImagens(texto, imagens = []) {
+  if (!imagens.length) return texto;
+
+  return [
+    ...imagens.map((img) => ({
+      type: 'image',
+      source: { type: 'base64', media_type: img.tipo, data: img.base64 },
+    })),
+    { type: 'text', text: texto },
+  ];
+}
+
+/**
  * Chama a API. Nunca lanca: devolve {ok, texto, uso} ou {ok:false, erro}.
  * Faz backoff em erro transitorio (429 e 5xx).
  *
- * @param {string} prompt
+ * @param {string|Array} prompt texto, ou blocos de conteudo (ver comImagens)
  * @param {object} opcoes
  * @param {string} opcoes.system
  * @param {number} [opcoes.maxTokens]

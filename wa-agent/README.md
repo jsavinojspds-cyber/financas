@@ -26,7 +26,8 @@ numero silenciosamente.
 | 1 | pronta | Listener + schema + classificacao |
 | 2 | pronta | `wa_rules` + SLA + os 13 grupos reais |
 | 3 | pronta | Worker de triagem/resumo/sugestao (`src/worker.js`) |
-| 3.5 | adiada | Transcricao de audio — pipeline de texto primeiro |
+| 3.5a | pronta | Leitura de imagem (`src/midia.js` + visao do Claude) |
+| 3.5b | adiada | Transcricao de audio — pipeline de texto primeiro |
 | 4 | proxima | PWA painel |
 | 5 | pronta | Digest 3x/dia, 07h30 / 13h00 / 18h30 (`src/digest.js`) |
 | 6 | pendente | Busca semantica pgvector |
@@ -122,7 +123,42 @@ npm run worker                       # processa ate 500 mensagens
 npm run worker -- --dry-run          # mostra o que faria, sem gravar nem marcar
 npm run worker -- --limit 100
 npm run worker -- --chat '120363xxx@g.us'
+npm run worker -- --sem-imagens      # nao baixa foto nenhuma
 ```
+
+#### Imagens
+
+Foto no canal comercial quase sempre e documento: tabela de preco, print de
+pedido, nota fiscal, comprovante, gondola com ruptura, planilha fotografada da
+tela. O worker baixa a imagem e manda para o Claude ler — nao existe servico de
+terceiro nem chave nova, a visao e do proprio modelo.
+
+Quem baixa e o **worker**, nao o listener:
+
+- o listener fica enxuto, sem trafego extra amarrado ao socket vivo
+- so conversa que vai para a IA baixa. Silenciada, pessoal e ruido nunca baixam
+- nada e arquivado: o binario vive em memoria, vira leitura e e descartado.
+  Fica a descricao no resumo, nao a foto
+
+Limites, porque imagem custa token (~1.500 de entrada por foto):
+
+| Limite | Valor |
+|---|---|
+| imagens por conversa, por rodada | 4, as mais recentes |
+| tamanho maximo | 5MB (recusa antes de abrir conexao quando da) |
+| formatos | jpeg, png, gif, webp |
+| timeout do download | 20s |
+
+**URL expirada.** O link de midia do WhatsApp nao dura para sempre. Se expirar,
+a imagem se perde: o prompt marca `[imagem nao recuperada]` e o modelo e
+instruido a dizer que o resumo esta incompleto, em vez de especular. Nao ha
+pedido de reenvio porque isso e operacao de ENVIO, proibida aqui. Na pratica:
+rode o worker no mesmo dia (o cron de 3x ao dia resolve).
+
+**LGPD.** Para baixar depois, o `raw` de `wa_messages` guarda `mediaKey` e
+`fileEncSha256` — ou seja, a chave de decriptacao da midia de terceiros. Some
+no `fn_wa_purge_old`. E mais uma razao para este Supabase ser separado da base
+corporativa.
 
 Nem toda conversa vai para a IA. A ordem economiza token:
 
@@ -244,6 +280,7 @@ wa-agent/
     ├── mensagem.js        normaliza o payload do Baileys
     ├── db.js              acesso ao Supabase, nunca lanca
     ├── claude.js          chamada a API + parse de JSON, com retry
+    ├── midia.js           baixa e descriptografa imagem, sob demanda
     ├── listener.js        read-only, buffer 5s, reconexao exponencial
     ├── worker.js          triagem/resumo/sugestao (Fase 3)
     ├── digest.js          painel priorizado (Fase 5)

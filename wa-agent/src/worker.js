@@ -16,13 +16,17 @@
 import { pathToFileURL } from 'node:url';
 
 import { config, exigir } from './config.js';
-import { chamarClaude, parseJson } from './claude.js';
+import { chamarClaude, parseJson, comImagens } from './claude.js';
 import { consultar, salvarAnalise, marcarProcessadas } from './db.js';
+import { baixarDoLote } from './midia.js';
 import { agora, decorrido, hora } from './tempo.js';
 
 const LIMITE_PADRAO = 500;
 const MAX_MSGS_POR_CONVERSA = 60;   // contexto por chamada
 const MAX_CHARS_POR_MSG = 400;
+// Imagem custa token: uma foto tipica gasta ~1.500 de entrada. Grupo de
+// merchandising manda dezenas por dia, entao o teto e por conversa.
+const MAX_IMAGENS_POR_CONVERSA = 4;
 
 const SYSTEM = `Voce faz triagem do WhatsApp de Jean Savino, Head de Vendas Centro-Norte da
 Duty Cosmeticos, em Manaus. Territorio: Norte (AM, RR, PA, AP, RO, AC) e Centro-Oeste.
@@ -55,6 +59,15 @@ RASCUNHO — como o Jean escreve
   a informacao que falta, sem prometer prazo que o Jean nao pode cumprir
 - null quando aguardando_jean e false
 
+IMAGENS
+Quando houver imagem anexada, ela faz parte da conversa e vem antes do texto.
+No canal comercial do Norte, foto quase sempre e documento: tabela de preco,
+print de pedido, nota fiscal, comprovante, gondola com ruptura, planilha
+fotografada da tela. LEIA o que esta escrito na imagem e use no resumo —
+numero de pedido, SKU, valor, data, codigo de rejeicao. Se a imagem for
+irrelevante (meme, foto social), ignore em vez de descrever.
+Nunca invente conteudo de imagem que nao foi anexada.
+
 Vocabulario: sell-in, sell-out, positivacao, ruptura, verba/trade, JBP, RTM,
 canal tradicional/farma/alimentar, DDE/DDR, fundo cooperado, acordo comercial,
 Salesforce, Scanntech, Nielsen, Power BI.
@@ -73,6 +86,7 @@ function args() {
     limite: Number.parseInt(valor('--limit', String(LIMITE_PADRAO)), 10) || LIMITE_PADRAO,
     chat: valor('--chat', null),
     dryRun: a.includes('--dry-run'),
+    semImagens: a.includes('--sem-imagens'),
   };
 }
 
@@ -127,14 +141,32 @@ export function decidir(chat, keywordsAchadas) {
 }
 
 // --- prompt -----------------------------------------------------------------
-export function montarPrompt(chat, mensagens, keywordsAchadas) {
+export function montarPrompt(chat, mensagens, keywordsAchadas, imagens = []) {
+  // Só marca como anexada a imagem que realmente foi baixada. O resto vira
+  // "nao recuperada", para o modelo nao inventar o que nao viu.
+  const anexadas = new Set(imagens.map((i) => i.msg_id));
+
   const linhas = mensagens
     .slice(-MAX_MSGS_POR_CONVERSA)
     .map((m) => {
       const quem = m.from_me ? 'JEAN' : (m.sender_name ?? 'contato');
-      const texto = m.conteudo
-        ? m.conteudo.slice(0, MAX_CHARS_POR_MSG)
-        : `[${m.tipo}${m.tipo === 'audio' ? ' — ainda nao transcrito' : ''}]`;
+
+      let texto;
+      if (m.conteudo) {
+        texto = m.conteudo.slice(0, MAX_CHARS_POR_MSG);
+        if (m.tipo === 'imagem') {
+          texto = anexadas.has(m.msg_id)
+            ? `[imagem anexada] ${texto}`
+            : `[imagem nao recuperada] ${texto}`;
+        }
+      } else if (m.tipo === 'imagem') {
+        texto = anexadas.has(m.msg_id) ? '[imagem anexada]' : '[imagem nao recuperada]';
+      } else if (m.tipo === 'audio') {
+        texto = '[audio — ainda nao transcrito]';
+      } else {
+        texto = `[${m.tipo}]`;
+      }
+
       const citada = m.citada ? ` (respondendo: "${m.citada.slice(0, 120)}")` : '';
       const arroba = m.mencionou_me ? ' [CITOU O JEAN]' : '';
       return `[${hora(m.timestamp)}] ${quem}${arroba}: ${texto}${citada}`;
@@ -157,12 +189,34 @@ export function montarPrompt(chat, mensagens, keywordsAchadas) {
       : null,
   ].filter(Boolean).join('\n');
 
-  const aviso = mensagens.some((m) => m.tipo === 'audio')
-    ? '\n\nATENCAO: ha audio nesta conversa que ainda nao e transcrito (Fase 3.5).' +
-      ' Considere o resumo incompleto e diga isso no campo resumo.'
+  // As imagens chegam nos blocos de conteudo, antes deste texto. Esta lista
+  // diz ao modelo qual e qual, para ele nao trocar uma pela outra.
+  const listaImagens = imagens.length
+    ? `\n\nImagens anexadas, na ordem em que aparecem acima:\n` +
+      imagens
+        .map((img, i) => `${i + 1}. ${hora(img.timestamp)}` +
+                         (img.legenda ? ` — legenda: "${img.legenda.slice(0, 120)}"` : ' — sem legenda'))
+        .join('\n')
     : '';
 
-  return `${cabecalho}\n\nMensagens novas (${mensagens.length}):\n${linhas}${aviso}`;
+  const naoRecuperadas = mensagens.filter(
+    (m) => m.tipo === 'imagem' && !anexadas.has(m.msg_id),
+  ).length;
+
+  const pendencias = [];
+  if (mensagens.some((m) => m.tipo === 'audio')) {
+    pendencias.push('ha audio que ainda nao e transcrito (Fase 3.5)');
+  }
+  if (naoRecuperadas > 0) {
+    pendencias.push(`${naoRecuperadas} imagem(ns) nao pode(m) ser recuperada(s)`);
+  }
+
+  const aviso = pendencias.length
+    ? `\n\nATENCAO: ${pendencias.join('; ')}. Considere o resumo incompleto e ` +
+      'diga isso no campo resumo. Nao especule sobre o conteudo que faltou.'
+    : '';
+
+  return `${cabecalho}\n\nMensagens novas (${mensagens.length}):\n${linhas}${listaImagens}${aviso}`;
 }
 
 // --- validacao da saida da IA -----------------------------------------------
@@ -189,9 +243,22 @@ export function validar(bruto, keywordsAchadas) {
 }
 
 // --- processamento de uma conversa ------------------------------------------
-async function analisar(chat, mensagens, keywordsAchadas, dryRun) {
+async function analisar(chat, mensagens, keywordsAchadas, dryRun, comMidia = true) {
+  // So baixa depois da triagem: conversa silenciada, pessoal ou ruido nunca
+  // chega aqui, entao nunca gera trafego de download.
+  let imagens = [];
+  if (comMidia && mensagens.some((m) => m.tipo === 'imagem')) {
+    const r = await baixarDoLote(mensagens, MAX_IMAGENS_POR_CONVERSA);
+    imagens = r.imagens;
+    if (r.tentadas > 0) {
+      const kb = Math.round(imagens.reduce((s, i) => s + i.bytes, 0) / 1024);
+      console.log(`  imagens: ${imagens.length}/${r.tentadas} baixadas (${kb}KB)` +
+                  (r.falhas ? `, ${r.falhas} falhou/expirou` : ''));
+    }
+  }
+
   const resposta = await chamarClaude(
-    montarPrompt(chat, mensagens, keywordsAchadas),
+    comImagens(montarPrompt(chat, mensagens, keywordsAchadas, imagens), imagens),
     { system: SYSTEM, maxTokens: 1500 },
   );
 
@@ -249,10 +316,11 @@ async function analisar(chat, mensagens, keywordsAchadas, dryRun) {
 // --- main -------------------------------------------------------------------
 async function main() {
   exigir(['supabaseUrl', 'supabaseKey', 'anthropicKey']);
-  const { limite, chat: soEsteChat, dryRun } = args();
+  const { limite, chat: soEsteChat, dryRun, semImagens } = args();
 
   console.log(`\nWA-AGENT — triagem em ${agora()} (Manaus)`);
-  console.log(`Modelo: ${config.anthropicModel}${dryRun ? '   [DRY-RUN]' : ''}\n`);
+  console.log(`Modelo: ${config.anthropicModel}${dryRun ? '   [DRY-RUN]' : ''}` +
+              `${semImagens ? '   [SEM IMAGENS]' : ''}\n`);
 
   // 1. fila
   const fila = await consultar('wa_messages', (q) => {
@@ -314,7 +382,7 @@ async function main() {
     }
 
     console.log(`${nome}  — ${mensagens.length} msg, ${motivo}`);
-    const r = await analisar(chat, mensagens, achadas, dryRun);
+    const r = await analisar(chat, mensagens, achadas, dryRun, !semImagens);
     if (r.ok) {
       relatorio.ia += 1;
       tokensIn += r.uso?.entrada ?? 0;

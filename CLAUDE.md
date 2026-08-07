@@ -102,6 +102,7 @@ financas/
         ├── mensagem.js    normaliza payload do Baileys, desembrulha efêmera
         ├── db.js          acesso ao Supabase, nenhuma função lança
         ├── claude.js      chamada à API + parse de JSON com retry
+        ├── midia.js       baixa e descriptografa imagem, sob demanda
         ├── listener.js    read-only, buffer 5s, reconexão exponencial
         ├── worker.js      triagem/resumo/sugestão (Fase 3)
         ├── digest.js      painel priorizado (Fase 5)
@@ -114,7 +115,7 @@ financas/
 ## 6. Modelo de dados
 
 - **`wa_chats`** — `bucket` (pessoal|comercial|ruido|indefinido), `segmento`, `responsavel`, `uf`, `muted`, `sla_horas`
-- **`wa_messages`** — mensagens brutas, `processed=false` é a fila do worker
+- **`wa_messages`** — mensagens brutas, `processed=false` é a fila do worker. O `raw` **preserva `mediaKey`/`fileEncSha256`**: sem eles a imagem fica irrecuperável, porque pedir reenvio de mídia é operação de envio (proibida). Isso significa que o `raw` carrega chave de decriptação de mídia de terceiros — mais uma razão para o projeto Supabase ser separado
 - **`wa_threads_analysis`** — saída da IA (Fase 3)
 - **`wa_sla_policy`** — SLA por segmento, trigger aplica automático em `wa_chats`
 - **`wa_rules`** — padrão de nome → classificação. Consultado **antes** da IA (economiza token e evita erro em contato conhecido)
@@ -174,7 +175,8 @@ sell-in, sell-out, positivação, ruptura, verba/trade, JBP, RTM, canal tradicio
 | 1 | pronta | Listener + schema + classificação |
 | 2 | pronta | `wa_rules` + SLA + grupos reais |
 | 3 | pronta | Worker de triagem/resumo/sugestão com Claude — `src/worker.js` |
-| 3.5 | adiada | **Transcrição de áudio** — ~60% do fluxo comercial no Norte é áudio; sem isso o resumo é cego. Adiada por decisão do Jean: pipeline de texto primeiro. O worker já marca áudio como não transcrito no prompt, então o resumo avisa que está incompleto em vez de fingir que leu tudo |
+| 3.5a | pronta | **Leitura de imagem** — worker baixa a foto e manda para o Claude ver. Foto no canal comercial é quase sempre documento: tabela, print de pedido, NF, gôndola com ruptura |
+| 3.5b | adiada | **Transcrição de áudio** — ~60% do fluxo comercial no Norte é áudio; sem isso o resumo é cego. Adiada por decisão do Jean: pipeline de texto primeiro. O worker já marca áudio como não transcrito no prompt, então o resumo avisa que está incompleto em vez de fingir que leu tudo |
 | 4 | **próxima** | PWA painel (fila + copiar rascunho) |
 | 5 | pronta | Digest 3x/dia — 07h30, 13h00, 18h30 (Manaus) — `src/digest.js` |
 | 6 | pendente | Busca semântica pgvector no histórico |

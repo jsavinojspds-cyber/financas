@@ -164,21 +164,34 @@ function recortar(texto, max) {
 }
 
 /**
- * Tira do raw o que nao serve e pesa: buffers de midia e chaves de
- * criptografia. Sem isso o jsonb do Supabase incha rapido.
+ * Campos pesados que nao servem para nada depois. `jpegThumbnail` e uma
+ * previa em base64 dentro do proprio payload: infla o jsonb e nao substitui
+ * a imagem real, que o worker baixa quando precisa.
+ */
+const DESCARTAR = ['jpegThumbnail', 'thumbnailDirectPath', 'streamingSidecar'];
+
+/**
+ * Enxuga o raw sem quebrar o download posterior.
+ *
+ * ATENCAO: `mediaKey`, `fileEncSha256` e `directPath` ficam. Sao eles que
+ * permitem ao worker baixar e descriptografar a imagem depois (src/midia.js).
+ * Remove-los deixa a midia irrecuperavel: o WhatsApp so entrega o arquivo
+ * cifrado, e a unica forma de pedir de novo e um retry de midia, que e
+ * operacao de ENVIO — proibida aqui (CLAUDE.md secao 2).
+ *
+ * Consequencia de LGPD: o raw carrega a chave de decriptacao da midia de
+ * terceiros. Ela vive so neste projeto Supabase, separado da base
+ * corporativa, e some no fn_wa_purge_old.
  */
 function enxugar(msg) {
   try {
-    const copia = JSON.parse(
+    return JSON.parse(
       JSON.stringify(msg, (chave, valor) => {
-        if (['mediaKey', 'fileEncSha256', 'fileSha256', 'jpegThumbnail', 'thumbnailDirectPath', 'streamingSidecar'].includes(chave)) {
-          return undefined;
-        }
+        if (DESCARTAR.includes(chave)) return undefined;
         if (valor?.type === 'Buffer') return undefined;
         return valor;
       }),
     );
-    return copia;
   } catch {
     return null;
   }
