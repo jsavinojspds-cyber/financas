@@ -1,0 +1,7 @@
+.env
+auth_info_baileys/
+node_modules/
+ecosystem.config.cjs
+logs/
+*.log
+*.tgz

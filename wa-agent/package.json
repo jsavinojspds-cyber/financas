@@ -1,0 +1,23 @@
+{
+  "name": "wa-agent",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Espelho read-only do WhatsApp para Supabase, com triagem por IA e digest priorizado",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/listener.js",
+    "classificar": "node src/classificar.js",
+    "status": "node src/status.js",
+    "check": "node --check src/listener.js && node --check src/classificar.js && node --check src/status.js && node --check src/db.js && node --check src/config.js && node --check src/tempo.js && node --check src/mensagem.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "dotenv": "^16.4.5",
+    "pino": "^9.4.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

@@ -1,0 +1,24 @@
+# Segredos — NUNCA commitar
+.env
+.env.local
+.env.*.local
+
+# Sessão do WhatsApp — perder = reparear via QR presencialmente,
+# vazar = acesso total à conta. Backup fora do git (ver README do wa-agent).
+auth_info_baileys/
+*.tgz
+
+# Dependências e build
+node_modules/
+dist/
+build/
+
+# PM2
+ecosystem.config.cjs
+logs/
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
