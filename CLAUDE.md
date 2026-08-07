@@ -57,10 +57,13 @@ Listener Baileys (VPS, PM2)  ── src/listener.js
 Supabase Postgres            ── wa_chats / wa_messages
    │ cron
    ▼
-Worker Claude API            ── (Fase 3, a construir)
+Worker Claude API            ── src/worker.js (cron)
+   │ wa_threads_analysis
+   ▼
+Digest priorizado            ── src/digest.js (cron 3x/dia)
    │
    ▼
-PWA painel + digest          ── (Fases 4-5)
+PWA painel                   ── (Fase 4, a construir)
 ```
 
 - **Node 20+**, ESM (`"type": "module"`)
@@ -91,7 +94,8 @@ financas/
     ├── sql/
     │   ├── 001_schema.sql         tabelas, triggers, RLS, expurgo 180d
     │   ├── 002_sla_e_regras.sql   política de SLA + wa_rules genéricas
-    │   └── 003_grupos_reais.sql   os 13 grupos reais + keywords críticas
+    │   ├── 003_grupos_reais.sql   os 13 grupos reais + keywords críticas
+    │   └── 004_digest.sql         vw_wa_digest + contagens do painel
     └── src/
         ├── config.js      valida .env, avisa se a chave for anon
         ├── tempo.js       UTC no banco → America/Manaus na saída
@@ -100,6 +104,7 @@ financas/
         ├── claude.js      chamada à API + parse de JSON com retry
         ├── listener.js    read-only, buffer 5s, reconexão exponencial
         ├── worker.js      triagem/resumo/sugestão (Fase 3)
+        ├── digest.js      painel priorizado (Fase 5)
         ├── classificar.js classificação assistida por IA (interativo)
         └── status.js      diagnóstico da coleta
 ```
@@ -115,7 +120,8 @@ financas/
 - **`wa_rules`** — padrão de nome → classificação. Consultado **antes** da IA (economiza token e evita erro em contato conhecido)
 - **`wa_keywords_criticas`** — termos que forçam prioridade 5 mesmo em grupo silenciado
 - **`vw_wa_inbox`** — visão da caixa de entrada
-- **`vw_wa_sla_estourado`** — base do digest: comercial, não silenciado, última msg **não é do Jean**, passou do SLA
+- **`vw_wa_sla_estourado`** — comercial, não silenciado, última msg **não é do Jean**, passou do SLA
+- **`vw_wa_digest`** — base do painel: a última análise de cada conversa + o estado atual dela. `aguardando_jean` vem da análise, `last_message_from_me` vem de agora — é o cruzamento que evita cobrar algo já respondido
 
 ---
 
@@ -168,9 +174,9 @@ sell-in, sell-out, positivação, ruptura, verba/trade, JBP, RTM, canal tradicio
 | 1 | pronta | Listener + schema + classificação |
 | 2 | pronta | `wa_rules` + SLA + grupos reais |
 | 3 | pronta | Worker de triagem/resumo/sugestão com Claude — `src/worker.js` |
-| 3.5 | **próxima** | **Transcrição de áudio** — ~60% do fluxo comercial no Norte é áudio; sem isso o resumo é cego |
-| 4 | pendente | PWA painel (fila + copiar rascunho) |
-| 5 | pendente | Digest 3x/dia — 07h30, 13h00, 18h30 (Manaus) |
+| 3.5 | adiada | **Transcrição de áudio** — ~60% do fluxo comercial no Norte é áudio; sem isso o resumo é cego. Adiada por decisão do Jean: pipeline de texto primeiro. O worker já marca áudio como não transcrito no prompt, então o resumo avisa que está incompleto em vez de fingir que leu tudo |
+| 4 | **próxima** | PWA painel (fila + copiar rascunho) |
+| 5 | pronta | Digest 3x/dia — 07h30, 13h00, 18h30 (Manaus) — `src/digest.js` |
 | 6 | pendente | Busca semântica pgvector no histórico |
 
 ### Formato-alvo do digest
@@ -221,6 +227,7 @@ npm run status                    # diagnóstico da coleta
 npm run classificar               # classificação assistida
 npm run worker                    # triagem: resumo + rascunho
 npm run worker -- --dry-run       # mostra o que faria, sem gravar
+npm run digest                    # o painel, no formato da seção 8
 npm run check                     # node --check em todo src/
 ```
 
@@ -229,6 +236,7 @@ SQL útil:
 select fn_wa_apply_rules();                  -- aplica regras conhecidas
 select * from vw_wa_inbox order by msg_count desc;
 select * from vw_wa_sla_estourado;
+select * from vw_wa_digest;                  -- base do painel
 select fn_wa_purge_old(180);                 -- expurgo LGPD
 ```
 

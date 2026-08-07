@@ -26,9 +26,9 @@ numero silenciosamente.
 | 1 | pronta | Listener + schema + classificacao |
 | 2 | pronta | `wa_rules` + SLA + os 13 grupos reais |
 | 3 | pronta | Worker de triagem/resumo/sugestao (`src/worker.js`) |
-| 3.5 | proxima | Transcricao de audio |
-| 4 | pendente | PWA painel |
-| 5 | pendente | Digest 3x/dia (07h30, 13h00, 18h30 Manaus) |
+| 3.5 | adiada | Transcricao de audio — pipeline de texto primeiro |
+| 4 | proxima | PWA painel |
+| 5 | pronta | Digest 3x/dia, 07h30 / 13h00 / 18h30 (`src/digest.js`) |
 | 6 | pendente | Busca semantica pgvector |
 
 ## Instalacao
@@ -44,9 +44,10 @@ No SQL Editor, rode em ordem:
 sql/001_schema.sql        tabelas, triggers, RLS, expurgo 180d
 sql/002_sla_e_regras.sql  politica de SLA + wa_rules + views
 sql/003_grupos_reais.sql  os 13 grupos + RCAs + keywords criticas
+sql/004_digest.sql        vw_wa_digest + contagens do painel
 ```
 
-Os tres sao idempotentes: rodar de novo nao duplica nada.
+Os quatro sao idempotentes: rodar de novo nao duplica nada.
 
 Depois, em Settings > API, copie a **service_role** key. Nao e a anon. O RLS
 fica ligado sem policy publica, entao a anon key nao le nada de proposito.
@@ -102,6 +103,7 @@ tar czf ~/auth-backup-$(date +%F).tgz -C ~/wa-agent auth_info_baileys
 npm run status           # diagnostico da coleta
 npm run classificar      # classificacao assistida por IA
 npm run worker           # triagem: resumo + rascunho
+npm run digest           # o painel do dia
 pm2 logs wa-agent --lines 60
 pm2 restart wa-agent
 ```
@@ -146,6 +148,61 @@ Agendar (a Fase 5 vai gerar o digest a partir daqui):
 
 Confira o fuso da VPS antes: `timedatectl`. Se estiver em UTC, some 4 horas.
 
+## Digest (Fase 5)
+
+O painel do dia, no formato da secao 8 do CLAUDE.md. So le e imprime.
+
+```bash
+npm run digest                  # painel em texto
+npm run digest -- --json        # mesma coisa em JSON, para a Fase 4
+npm run digest -- --horas 12    # janela das contagens (padrao 24h)
+npm run digest -- --largura 60  # para tela estreita
+```
+
+Saida:
+
+```
+PAINEL COMERCIAL — 06/08, 07h30
+
+AGUARDANDO VOCÊ (2)
+1. Scarletty (RO) — ruptura de 3 SKUs no distribuidor de Porto Velho.
+   [rascunho pronto | ruptura]
+   parado ha 1d 6h, SLA 8h (3.75x)
+2. Mateus - Temporário — cobram tabela de julho desde ontem. Citou você 2x.
+   [rascunho pronto]
+   parado ha 18h00, SLA 4h (4.5x)
+
+MONITORAR (1)
+- Assaí Brasil - Duty: rejeicao fiscal de julho sem retorno (D+3) (5h00)
+
+SILENCIADO (2 grupos, 3 mensagens, nada relevante)
+
+---
+RASCUNHOS (copie e envie você mesmo)
+
+1. Scarletty (RO)
+   Scarletty, quais os 3 SKUs? Me manda ate hoje 17h que eu falo com o CD.
+```
+
+**Ordem do painel:** keyword critica primeiro, depois estouro de SLA
+**proporcional**, depois prioridade. Proporcional e nao absoluto: KA parado 5h
+(SLA 4h, razao 1.25) vem antes de interno parado 26h (SLA 24h, razao 1.08).
+
+**AGUARDANDO VOCE** so lista conversa onde a bola esta com voce *agora*:
+`aguardando_jean` vem da analise, mas `last_message_from_me` vem do estado
+atual. Se voce respondeu depois que o worker rodou, a conversa sai sozinha do
+painel. O SLA tambem para de correr quando voce responde — o painel nao cobra
+o que ja foi resolvido.
+
+Agendar os tres horarios:
+
+```cron
+# 07h30, 13h00 e 18h30 de Manaus (GMT-4)
+30 7  * * *  cd ~/wa-agent && /usr/bin/node src/digest.js >> logs/digest.log 2>&1
+0  13 * * *  cd ~/wa-agent && /usr/bin/node src/digest.js >> logs/digest.log 2>&1
+30 18 * * *  cd ~/wa-agent && /usr/bin/node src/digest.js >> logs/digest.log 2>&1
+```
+
 Ver o que saiu:
 
 ```sql
@@ -189,6 +246,7 @@ wa-agent/
     ├── claude.js          chamada a API + parse de JSON, com retry
     ├── listener.js        read-only, buffer 5s, reconexao exponencial
     ├── worker.js          triagem/resumo/sugestao (Fase 3)
+    ├── digest.js          painel priorizado (Fase 5)
     ├── classificar.js     classificacao assistida (interativo)
     └── status.js          diagnostico da coleta
 ```
