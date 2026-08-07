@@ -124,6 +124,7 @@ create index if not exists ix_wa_analysis_prio on public.wa_threads_analysis (pr
 create or replace function public.fn_wa_touch()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.atualizado_em := now();
@@ -140,6 +141,7 @@ create trigger tg_wa_chats_touch
 create or replace function public.fn_wa_bump_chat()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   update public.wa_chats c
@@ -171,6 +173,7 @@ create trigger tg_wa_messages_bump
 create or replace function public.fn_wa_purge_old(dias integer default 180)
 returns TABLE (mensagens_removidas bigint, analises_removidas bigint)
 language plpgsql
+set search_path = ''
 as $$
 declare
   corte timestamptz := now() - make_interval(days => dias);

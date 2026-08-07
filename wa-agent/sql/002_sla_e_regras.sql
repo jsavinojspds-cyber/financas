@@ -32,6 +32,7 @@ on conflict (segmento) do update
 create or replace function public.fn_wa_apply_sla()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 declare
   h integer;
@@ -113,6 +114,7 @@ comment on table public.wa_keywords_criticas is
 create or replace function public.fn_wa_apply_rules()
 returns TABLE (chat_id text, nome text, bucket text, segmento text, regra_id bigint)
 language plpgsql
+set search_path = ''
 as $$
 begin
   return query
@@ -159,7 +161,11 @@ comment on function public.fn_wa_apply_rules is
 -- ---------------------------------------------------------------------------
 -- vw_wa_inbox — visao da caixa de entrada
 -- ---------------------------------------------------------------------------
-create or replace view public.vw_wa_inbox as
+-- security_invoker: sem isto a view roda com a permissao de quem a CRIOU e
+-- passa por cima do RLS das tabelas de baixo. Com a anon key (que e publica)
+-- qualquer um leria as conversas. Exige Postgres 15+.
+create or replace view public.vw_wa_inbox
+with (security_invoker = on) as
 select
   c.id                as chat_id,
   c.nome,
@@ -189,7 +195,8 @@ comment on view public.vw_wa_inbox is
 -- Ordenado pelo estouro PROPORCIONAL: KA parado 5h (razao 1.25) vem antes
 -- de interno parado 20h (razao 0.83). Ver CLAUDE.md secao 8.
 -- ---------------------------------------------------------------------------
-create or replace view public.vw_wa_sla_estourado as
+create or replace view public.vw_wa_sla_estourado
+with (security_invoker = on) as
 select
   c.id            as chat_id,
   c.nome,

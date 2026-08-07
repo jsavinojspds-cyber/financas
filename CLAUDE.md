@@ -68,7 +68,8 @@ PWA painel                   ── (Fase 4, a construir)
 
 - **Node 20+**, ESM (`"type": "module"`)
 - **Baileys** `@whiskeysockets/baileys`
-- **Supabase** com `service_role` key (RLS ligado, sem policy pública)
+- **Supabase** com `service_role` key (RLS ligado, sem policy pública). Projeto `ycakggiaklceubevkhag`, região us-west-2. **Não** é o `duty-rag` — esse é a base corporativa, separada por LGPD
+- **View precisa de `security_invoker = on`.** Sem isso ela é `SECURITY DEFINER` e fura o RLS das tabelas: a anon key (pública) lê tudo. Verificado e corrigido no `005`
 - **Claude API**: modelo `claude-sonnet-4-6`, endpoint `/v1/messages`
 - **PM2** para processo, `ecosystem.config.cjs`
 - VPS com **IP brasileiro** (Oracle Cloud São Paulo ou Hostinger BR) — IP europeu com número +55 é padrão de fraude
@@ -95,7 +96,8 @@ financas/
     │   ├── 001_schema.sql         tabelas, triggers, RLS, expurgo 180d
     │   ├── 002_sla_e_regras.sql   política de SLA + wa_rules genéricas
     │   ├── 003_grupos_reais.sql   os 13 grupos reais + keywords críticas
-    │   └── 004_digest.sql         vw_wa_digest + contagens do painel
+    │   ├── 004_digest.sql         vw_wa_digest + contagens do painel
+    │   └── 005_seguranca.sql      revoga anon/authenticated
     └── src/
         ├── config.js      valida .env, avisa se a chave for anon
         ├── tempo.js       UTC no banco → America/Manaus na saída

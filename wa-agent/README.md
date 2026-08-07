@@ -46,12 +46,39 @@ sql/001_schema.sql        tabelas, triggers, RLS, expurgo 180d
 sql/002_sla_e_regras.sql  politica de SLA + wa_rules + views
 sql/003_grupos_reais.sql  os 13 grupos + RCAs + keywords criticas
 sql/004_digest.sql        vw_wa_digest + contagens do painel
+sql/005_seguranca.sql     revoga acesso de anon e authenticated
 ```
 
-Os quatro sao idempotentes: rodar de novo nao duplica nada.
+Os cinco sao idempotentes: rodar de novo nao duplica nada.
 
 Depois, em Settings > API, copie a **service_role** key. Nao e a anon. O RLS
 fica ligado sem policy publica, entao a anon key nao le nada de proposito.
+
+### Por que o 005 existe
+
+View no Postgres e `SECURITY DEFINER` por padrao: roda com a permissao de quem
+a criou e **passa por cima do RLS** das tabelas de baixo. Ligar RLS nas tabelas
+nao basta — a view continua entregando tudo. Como a anon key e publica (vai em
+app cliente, fica visivel no painel), qualquer um com ela e a URL do projeto
+leria as conversas inteiras pelas views.
+
+As views agora nascem com `security_invoker = on` (Postgres 15+), que faz cada
+uma rodar com a permissao de quem consulta. O `005` fecha o resto, tirando
+`anon` e `authenticated` de tudo.
+
+Conferir a qualquer momento:
+
+```sql
+-- deve voltar 0
+select count(*) from information_schema.role_table_grants
+ where table_schema='public'
+   and (table_name like 'wa\_%' escape '\' or table_name like 'vw\_wa%' escape '\')
+   and grantee in ('anon','authenticated');
+```
+
+Se um dia a Fase 4 (PWA) precisar ler do navegador, **nao** desfaca o 005. O
+caminho e um backend com service_role, ou policy explicita e estreita para
+`authenticated` — nunca devolver SELECT amplo para `anon`.
 
 ### 2. VPS
 

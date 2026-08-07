@@ -13,7 +13,9 @@
 -- mais com ele e o digest.js usa esse campo para tirar a conversa da lista.
 -- E o que evita cobrar o Jean de algo que ele ja resolveu.
 -- ---------------------------------------------------------------------------
-create or replace view public.vw_wa_digest as
+-- security_invoker: ver nota no 002. Sem isto a view fura o RLS.
+create or replace view public.vw_wa_digest
+with (security_invoker = on) as
 with ultima as (
   select distinct on (a.chat_id) a.*
     from public.wa_threads_analysis a
@@ -62,6 +64,7 @@ create or replace function public.fn_wa_mencoes(desde timestamptz)
 returns TABLE (chat_id text, mencoes bigint)
 language sql
 stable
+set search_path = ''
 as $$
   select m.chat_id, count(*)
     from public.wa_messages m
@@ -79,6 +82,7 @@ create or replace function public.fn_wa_silenciadas(desde timestamptz)
 returns TABLE (grupos bigint, mensagens bigint)
 language sql
 stable
+set search_path = ''
 as $$
   select count(distinct m.chat_id), count(*)
     from public.wa_messages m
