@@ -159,6 +159,7 @@ tar czf ~/auth-backup-$(date +%F).tgz -C ~/wa-agent auth_info_baileys
 
 ```bash
 npm run testar           # teste de conexao com o Supabase (nao toca no WhatsApp)
+npm run digest -- --bom-dia   # painel + rascunho de bom dia para o time
 npm run status           # diagnostico da coleta
 npm run classificar      # classificacao assistida por IA
 npm run worker           # triagem: resumo + rascunho
@@ -278,6 +279,35 @@ RASCUNHOS (copie e envie você mesmo)
    Scarletty, quais os 3 SKUs? Me manda ate hoje 17h que eu falo com o CD.
 ```
 
+### Bom dia para o time
+
+O digest da manha pode sair com um rascunho de bom dia pronto para copiar:
+
+```bash
+npm run digest -- --bom-dia
+```
+
+Configure o grupo no `.env` (pedaco do nome basta):
+
+```
+BOM_DIA_GRUPO=MERCHANDISING
+```
+
+Nao e texto fixo. Ele le as ultimas 24h do grupo e escreve algo com contexto
+real — o que ficou pendente, o que fechou — porque bom dia generico o time
+aprende a ignorar em duas semanas. O system prompt proibe inventar numero,
+meta, loja, SKU ou nome: sem material aproveitavel nas mensagens, sai so o bom
+dia curto.
+
+**O agente nao envia.** O texto sai no digest para voce copiar e mandar na hora
+que quiser. Se a API falhar, se faltar a chave, ou se o grupo ainda nao tiver
+aparecido na coleta, cai num texto generico e avisa o motivo entre colchetes —
+o digest nunca quebra por causa disso.
+
+Se voce quer o envio realmente automatico as 8h, o caminho e um Atalho no
+iPhone (Automacao > Hora do Dia), que dispara da sua propria sessao do
+WhatsApp. Nao pelo agente: ver a secao "O agente nao envia mensagem" no topo.
+
 **Ordem do painel:** keyword critica primeiro, depois estouro de SLA
 **proporcional**, depois prioridade. Proporcional e nao absoluto: KA parado 5h
 (SLA 4h, razao 1.25) vem antes de interno parado 26h (SLA 24h, razao 1.08).
@@ -291,8 +321,8 @@ o que ja foi resolvido.
 Agendar os tres horarios:
 
 ```cron
-# 07h30, 13h00 e 18h30 de Manaus (GMT-4)
-30 7  * * *  cd ~/wa-agent && /usr/bin/node src/digest.js >> logs/digest.log 2>&1
+# 07h30, 13h00 e 18h30 de Manaus (GMT-4). So a da manha leva --bom-dia.
+30 7  * * *  cd ~/wa-agent && /usr/bin/node src/digest.js --bom-dia >> logs/digest.log 2>&1
 0  13 * * *  cd ~/wa-agent && /usr/bin/node src/digest.js >> logs/digest.log 2>&1
 30 18 * * *  cd ~/wa-agent && /usr/bin/node src/digest.js >> logs/digest.log 2>&1
 ```
@@ -342,6 +372,7 @@ wa-agent/
     ├── listener.js        read-only, buffer 5s, reconexao exponencial
     ├── worker.js          triagem/resumo/sugestao (Fase 3)
     ├── digest.js          painel priorizado (Fase 5)
+    ├── bomdia.js          rascunho de bom dia com contexto das 24h
     ├── classificar.js     classificacao assistida (interativo)
     └── status.js          diagnostico da coleta
 ```

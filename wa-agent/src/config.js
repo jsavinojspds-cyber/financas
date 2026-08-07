@@ -23,6 +23,8 @@ export const config = {
   // Sobrescrever so faz sentido para teste ou proxy corporativo.
   anthropicBaseUrl: process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com',
   meuJid: process.env.MEU_JID ?? '',
+  // Grupo do rascunho de bom dia. Pedaco do nome basta.
+  bomDiaGrupo: process.env.BOM_DIA_GRUPO || 'MERCHANDISING',
   bufferMs: inteiro(process.env.BUFFER_MS, 5000),
   bufferMax: inteiro(process.env.BUFFER_MAX, 200),
   logLevel: process.env.LOG_LEVEL || 'info',

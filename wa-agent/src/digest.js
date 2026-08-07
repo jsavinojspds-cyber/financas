@@ -1,5 +1,5 @@
 // digest.js — Fase 5. Painel priorizado, 3x ao dia.
-// Uso: node src/digest.js [--horas 24] [--json] [--largura 76]
+// Uso: node src/digest.js [--horas 24] [--json] [--largura 76] [--bom-dia]
 //
 // Formato da secao 8 do CLAUDE.md. Sem emoji. Horario America/Manaus.
 //
@@ -12,7 +12,8 @@
 
 import { pathToFileURL } from 'node:url';
 
-import { exigir } from './config.js';
+import { config, exigir } from './config.js';
+import { gerarBomDia, formatar as formatarBomDia } from './bomdia.js';
 import { cliente, consultar } from './db.js';
 import { agora, decorrido } from './tempo.js';
 
@@ -29,6 +30,7 @@ function args() {
     horas: Number.parseInt(valor('--horas', String(JANELA_PADRAO)), 10) || JANELA_PADRAO,
     largura: Number.parseInt(valor('--largura', String(LARGURA_PADRAO)), 10) || LARGURA_PADRAO,
     json: a.includes('--json'),
+    bomDia: a.includes('--bom-dia'),
   };
 }
 
@@ -207,7 +209,7 @@ export function formatarRascunhos(aguardando) {
 // --- main -------------------------------------------------------------------
 async function main() {
   exigir(['supabaseUrl', 'supabaseKey']);
-  const { horas, json, largura } = args();
+  const { horas, json, largura, bomDia } = args();
   formatar.largura = largura;
 
   const desde = new Date(Date.now() - horas * 3600000).toISOString();
@@ -247,13 +249,21 @@ async function main() {
       aguardando_voce: aguardando,
       monitorar,
       silenciado: silenciadas,
+      bom_dia: bomDia ? await gerarBomDia(config.bomDiaGrupo) : null,
     }, null, 2));
     return;
   }
 
   console.log(formatar({ aguardando, monitorar, silenciadas, mencoes, janelaHoras: horas }));
+
   const rascunhos = formatarRascunhos(aguardando);
   if (rascunhos) console.log(rascunhos);
+
+  // So na rodada da manha (o cron das 07h30 passa --bom-dia).
+  if (bomDia) {
+    const bd = await gerarBomDia(config.bomDiaGrupo);
+    console.log(formatarBomDia(bd));
+  }
 }
 
 const executadoDireto =

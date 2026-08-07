@@ -108,6 +108,7 @@ financas/
         ├── listener.js    read-only, buffer 5s, reconexão exponencial
         ├── worker.js      triagem/resumo/sugestão (Fase 3)
         ├── digest.js      painel priorizado (Fase 5)
+        ├── bomdia.js      rascunho de bom dia com contexto das 24h
         ├── classificar.js classificação assistida por IA (interativo)
         └── status.js      diagnóstico da coleta
 ```
@@ -232,6 +233,7 @@ npm run classificar               # classificação assistida
 npm run worker                    # triagem: resumo + rascunho
 npm run worker -- --dry-run       # mostra o que faria, sem gravar
 npm run digest                    # o painel, no formato da seção 8
+npm run digest -- --bom-dia       # painel + rascunho de bom dia para o time
 npm run check                     # node --check em todo src/
 ```
 
