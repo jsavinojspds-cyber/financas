@@ -9,9 +9,10 @@
   },
   "scripts": {
     "start": "node src/listener.js",
+    "worker": "node src/worker.js",
     "classificar": "node src/classificar.js",
     "status": "node src/status.js",
-    "check": "node --check src/listener.js && node --check src/classificar.js && node --check src/status.js && node --check src/db.js && node --check src/config.js && node --check src/tempo.js && node --check src/mensagem.js"
+    "check": "for f in src/*.js; do node --check \"$f\" || exit 1; done && echo 'sintaxe ok'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

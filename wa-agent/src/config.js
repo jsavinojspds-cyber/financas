@@ -20,6 +20,8 @@ export const config = {
   supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
   anthropicKey: process.env.ANTHROPIC_API_KEY ?? '',
   anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
+  // Sobrescrever so faz sentido para teste ou proxy corporativo.
+  anthropicBaseUrl: process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com',
   meuJid: process.env.MEU_JID ?? '',
   bufferMs: inteiro(process.env.BUFFER_MS, 5000),
   bufferMax: inteiro(process.env.BUFFER_MAX, 200),

@@ -97,6 +97,49 @@ export async function aplicarRegras() {
   }
 }
 
+/**
+ * Grava a analise de uma conversa (saida do worker da Fase 3).
+ * @returns {{ok: boolean, erro?: string}}
+ */
+export async function salvarAnalise(linha) {
+  try {
+    const { error } = await cliente().from('wa_threads_analysis').insert(linha);
+    if (error) throw error;
+    return { ok: true };
+  } catch (err) {
+    console.error('[db] salvarAnalise falhou:', err?.message ?? err);
+    return { ok: false, erro: String(err?.message ?? err) };
+  }
+}
+
+/**
+ * Tira mensagens da fila do worker. So marca DEPOIS que a analise gravou,
+ * senao uma falha no meio faz a mensagem sumir sem nunca ter sido lida.
+ * @param {number[]} ids
+ */
+export async function marcarProcessadas(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return { ok: true, marcadas: 0 };
+
+  const FATIA = 500; // limite pratico do filtro `in` do PostgREST
+  let marcadas = 0;
+
+  try {
+    for (let i = 0; i < ids.length; i += FATIA) {
+      const fatia = ids.slice(i, i + FATIA);
+      const { error } = await cliente()
+        .from('wa_messages')
+        .update({ processed: true })
+        .in('id', fatia);
+      if (error) throw error;
+      marcadas += fatia.length;
+    }
+    return { ok: true, marcadas };
+  } catch (err) {
+    console.error('[db] marcarProcessadas falhou:', err?.message ?? err);
+    return { ok: false, marcadas, erro: String(err?.message ?? err) };
+  }
+}
+
 /** Leitura generica com tratamento de erro uniforme. */
 export async function consultar(tabela, montar = (q) => q) {
   try {

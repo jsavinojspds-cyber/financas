@@ -12,6 +12,7 @@ import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 
 import { config, exigir } from './config.js';
+import { chamarClaude, parseJson } from './claude.js';
 import { cliente, consultar, aplicarRegras } from './db.js';
 import { decorrido } from './tempo.js';
 
@@ -46,61 +47,6 @@ Salesforce, Scanntech, Nielsen, Power BI.
 Responda SOMENTE com JSON puro, sem cercas de codigo, sem texto antes ou depois.
 Formato: {"resultados":[{"chat_id":"...","bucket":"...","segmento":null,"responsavel":null,"uf":null,"confianca":0.0,"motivo":"..."}]}
 segmento, responsavel e uf sao null quando nao se aplicam. motivo: no maximo 12 palavras.`;
-
-/** Chama a API do Claude e devolve o texto. Nunca lanca. */
-async function chamarClaude(prompt) {
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': config.anthropicKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: config.anthropicModel,
-        max_tokens: 2000,
-        system: SYSTEM,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (!resp.ok) {
-      const corpo = await resp.text().catch(() => '');
-      return { ok: false, erro: `HTTP ${resp.status} ${corpo.slice(0, 300)}` };
-    }
-
-    const dados = await resp.json();
-    const texto = dados?.content?.map((c) => c.text ?? '').join('') ?? '';
-    return { ok: true, texto };
-  } catch (err) {
-    return { ok: false, erro: String(err?.message ?? err) };
-  }
-}
-
-/**
- * Limpa cercas ```json antes do parse e nunca derruba o lote (CLAUDE.md regra 6).
- */
-function parseJson(texto) {
-  if (!texto) return null;
-
-  let limpo = texto.trim();
-  limpo = limpo.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/,'').trim();
-
-  try {
-    return JSON.parse(limpo);
-  } catch {
-    // Ultimo recurso: pega do primeiro { ate o ultimo }.
-    const i = limpo.indexOf('{');
-    const f = limpo.lastIndexOf('}');
-    if (i === -1 || f <= i) return null;
-    try {
-      return JSON.parse(limpo.slice(i, f + 1));
-    } catch {
-      return null;
-    }
-  }
-}
 
 /** Amostra de mensagens de uma conversa, para a IA ter contexto. */
 async function amostra(chatId, limite = 12) {
@@ -205,7 +151,7 @@ async function main() {
       const lote = pendentes.linhas.slice(i, i + LOTE);
       console.log(`\n--- lote ${Math.floor(i / LOTE) + 1}, ${lote.length} conversa(s) ---`);
 
-      const resposta = await chamarClaude(await montarPrompt(lote));
+      const resposta = await chamarClaude(await montarPrompt(lote), { system: SYSTEM });
       if (!resposta.ok) {
         console.error(`  API falhou: ${resposta.erro}`);
         console.error('  Pulando este lote.');

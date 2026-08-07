@@ -25,8 +25,8 @@ numero silenciosamente.
 |---|---|---|
 | 1 | pronta | Listener + schema + classificacao |
 | 2 | pronta | `wa_rules` + SLA + os 13 grupos reais |
-| 3 | proxima | Worker de triagem/resumo/sugestao com Claude |
-| 3.5 | pendente | Transcricao de audio |
+| 3 | pronta | Worker de triagem/resumo/sugestao (`src/worker.js`) |
+| 3.5 | proxima | Transcricao de audio |
 | 4 | pendente | PWA painel |
 | 5 | pendente | Digest 3x/dia (07h30, 13h00, 18h30 Manaus) |
 | 6 | pendente | Busca semantica pgvector |
@@ -99,8 +99,9 @@ tar czf ~/auth-backup-$(date +%F).tgz -C ~/wa-agent auth_info_baileys
 ## Uso
 
 ```bash
-node src/status.js       # diagnostico da coleta
+npm run status           # diagnostico da coleta
 npm run classificar      # classificacao assistida por IA
+npm run worker           # triagem: resumo + rascunho
 pm2 logs wa-agent --lines 60
 pm2 restart wa-agent
 ```
@@ -108,6 +109,51 @@ pm2 restart wa-agent
 O `classificar` aplica `wa_rules` primeiro e so chama a IA no que sobrou.
 Contato conhecido nao gasta token. A IA sugere, voce confirma:
 `[Enter]` aceita, `e` edita, `p` pula, `q` sai.
+
+### Worker de triagem (Fase 3)
+
+Le a fila (`wa_messages.processed = false`), agrupa por conversa e grava resumo,
+prioridade e rascunho em `wa_threads_analysis`.
+
+```bash
+npm run worker                       # processa ate 500 mensagens
+npm run worker -- --dry-run          # mostra o que faria, sem gravar nem marcar
+npm run worker -- --limit 100
+npm run worker -- --chat '120363xxx@g.us'
+```
+
+Nem toda conversa vai para a IA. A ordem economiza token:
+
+| Situacao | O que acontece |
+|---|---|
+| `bucket = pessoal` | nunca vai para a IA, sai da fila |
+| silenciada ou `ruido` | so vai se bater keyword critica |
+| `indefinido` / sem classificacao | **fica na fila** ate voce rodar `npm run classificar` |
+| comercial ativa | vai para a IA |
+
+Keyword critica forca prioridade 5 mesmo em grupo silenciado. E por isso que
+CONEXAO DUTY entra `muted`: o ruido nao aparece, mas "ruptura" ou "verba" fura.
+
+A mensagem so sai da fila **depois** que a analise grava. Se a API falhar no
+meio, ela volta na proxima rodada em vez de sumir sem ter sido lida.
+
+Agendar (a Fase 5 vai gerar o digest a partir daqui):
+
+```cron
+# 20 minutos antes de cada digest — horario de Manaus (GMT-4)
+10 7,12,18 * * *  cd ~/wa-agent && /usr/bin/node src/worker.js >> logs/worker.log 2>&1
+```
+
+Confira o fuso da VPS antes: `timedatectl`. Se estiver em UTC, some 4 horas.
+
+Ver o que saiu:
+
+```sql
+select c.nome, a.prioridade, a.assunto, a.aguardando_jean, a.rascunho
+  from wa_threads_analysis a
+  join wa_chats c on c.id = a.chat_id
+ order by a.criado_em desc limit 20;
+```
 
 ### SQL util
 
@@ -140,7 +186,9 @@ wa-agent/
     ├── tempo.js           UTC no banco -> America/Manaus na saida
     ├── mensagem.js        normaliza o payload do Baileys
     ├── db.js              acesso ao Supabase, nunca lanca
+    ├── claude.js          chamada a API + parse de JSON, com retry
     ├── listener.js        read-only, buffer 5s, reconexao exponencial
+    ├── worker.js          triagem/resumo/sugestao (Fase 3)
     ├── classificar.js     classificacao assistida (interativo)
     └── status.js          diagnostico da coleta
 ```

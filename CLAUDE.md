@@ -74,22 +74,34 @@ PWA painel + digest          ── (Fases 4-5)
 
 ## 5. Estrutura de arquivos
 
+O WA-AGENT vive em `wa-agent/` dentro do repositório `financas` (a raiz também
+tem o projeto `meu-dia/`). Na VPS você copia só essa pasta, que vira `~/wa-agent`
+— por isso os comandos abaixo são relativos a ela.
+
 ```
-wa-agent/
-├── CLAUDE.md              ← este arquivo
-├── README.md              ← passo a passo de instalação
-├── provision.sh           ← setup da VPS (idempotente, para e avisa)
-├── package.json
-├── .env                   ← NUNCA commitar (chmod 600)
-├── ecosystem.config.cjs   ← gerado pelo provision.sh
-├── sql/
-│   ├── 001_schema.sql         tabelas, triggers, RLS, expurgo 180d
-│   ├── 002_sla_e_regras.sql   política de SLA + wa_rules genéricas
-│   └── 003_grupos_reais.sql   os 13 grupos reais + keywords críticas
-└── src/
-    ├── listener.js        read-only, buffer 5s, reconexão exponencial
-    ├── classificar.js     classificação assistida por IA (interativo)
-    └── status.js          diagnóstico da coleta
+financas/
+├── CLAUDE.md              ← este arquivo (raiz do repo)
+├── .gitignore             ← protege .env e auth_info_baileys/
+└── wa-agent/
+    ├── README.md          ← passo a passo de instalação
+    ├── provision.sh       ← setup da VPS (idempotente, para e avisa)
+    ├── package.json
+    ├── .env               ← NUNCA commitar (chmod 600)
+    ├── ecosystem.config.cjs   ← gerado pelo provision.sh, fora do git
+    ├── sql/
+    │   ├── 001_schema.sql         tabelas, triggers, RLS, expurgo 180d
+    │   ├── 002_sla_e_regras.sql   política de SLA + wa_rules genéricas
+    │   └── 003_grupos_reais.sql   os 13 grupos reais + keywords críticas
+    └── src/
+        ├── config.js      valida .env, avisa se a chave for anon
+        ├── tempo.js       UTC no banco → America/Manaus na saída
+        ├── mensagem.js    normaliza payload do Baileys, desembrulha efêmera
+        ├── db.js          acesso ao Supabase, nenhuma função lança
+        ├── claude.js      chamada à API + parse de JSON com retry
+        ├── listener.js    read-only, buffer 5s, reconexão exponencial
+        ├── worker.js      triagem/resumo/sugestão (Fase 3)
+        ├── classificar.js classificação assistida por IA (interativo)
+        └── status.js      diagnóstico da coleta
 ```
 
 ---
@@ -153,10 +165,10 @@ sell-in, sell-out, positivação, ruptura, verba/trade, JBP, RTM, canal tradicio
 
 | Fase | Estado | Entrega |
 |---|---|---|
-| 1 | **pronta** | Listener + schema + classificação |
+| 1 | pronta | Listener + schema + classificação |
 | 2 | pronta | `wa_rules` + SLA + grupos reais |
-| 3 | **próxima** | Worker de triagem/resumo/sugestão com Claude |
-| 3.5 | pendente | **Transcrição de áudio** — ~60% do fluxo comercial no Norte é áudio; sem isso o resumo é cego |
+| 3 | pronta | Worker de triagem/resumo/sugestão com Claude — `src/worker.js` |
+| 3.5 | **próxima** | **Transcrição de áudio** — ~60% do fluxo comercial no Norte é áudio; sem isso o resumo é cego |
 | 4 | pendente | PWA painel (fila + copiar rascunho) |
 | 5 | pendente | Digest 3x/dia — 07h30, 13h00, 18h30 (Manaus) |
 | 6 | pendente | Busca semântica pgvector no histórico |
@@ -199,11 +211,17 @@ Sem emoji. Prioridade por quanto estourou o SLA **proporcionalmente**, não por 
 ## 10. Comandos
 
 ```bash
+cd ~/wa-agent
+
 pm2 status
 pm2 logs wa-agent --lines 60      # QR de pareamento aparece aqui
 pm2 restart wa-agent
-node src/status.js                # diagnóstico da coleta
+
+npm run status                    # diagnóstico da coleta
 npm run classificar               # classificação assistida
+npm run worker                    # triagem: resumo + rascunho
+npm run worker -- --dry-run       # mostra o que faria, sem gravar
+npm run check                     # node --check em todo src/
 ```
 
 SQL útil:
