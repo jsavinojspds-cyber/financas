@@ -5,7 +5,7 @@ Assistente pessoal diário com clima, agenda, pendências, tarefas e entrada por
 ## Instalação
 
 ```bash
-cd "Meu dia"
+cd meu-dia
 npm install
 ```
 
@@ -33,7 +33,7 @@ Acesse `http://localhost:5173` no iPhone via Wi-Fi (mesmo rede) ou use o IP loca
 ## Deploy (Vercel — recomendado)
 
 ```bash
-npx vercel --cwd "Meu dia"
+npx vercel --cwd meu-dia
 ```
 
 Defina a variável `VITE_ANTHROPIC_KEY` nas configurações do projeto no Vercel.
