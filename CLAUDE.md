@@ -1,0 +1,220 @@
+# CLAUDE.md — WA-AGENT
+
+Contexto permanente do projeto. Leia antes de qualquer alteração.
+
+---
+
+## 1. Quem é o usuário
+
+**Jean Savino Palheta de Souza** — Head de Vendas Centro-Norte, Duty Cosméticos, baseado em Manaus/AM.
+Território: Norte (AM, RR, PA, AP, RO, AC) + Centro-Oeste. Gerencia RCAs (representantes comerciais autônomos), redes KA e distribuidores. Também é sócio da **Savino Locações LTDA** (locação de veículos, Manaus, franqueada Locagora).
+
+Trabalha com Power BI/DAX, Python (Outlook COM), React, Supabase, GitHub Pages. Não tem admin na máquina corporativa. Fuso: **America/Manaus (GMT-4)**.
+
+**Estilo de comunicação esperado nas saídas do agente:** português brasileiro, direto, frases curtas, sem emoji, sem "espero que esteja bem". Cobrança sempre com data.
+
+---
+
+## 2. O que é este projeto
+
+Espelhar o WhatsApp do Jean para um banco próprio, classificar as conversas com IA e entregar um **digest priorizado com rascunhos de resposta**. Objetivo: separar pessoal de comercial e parar de perder mensagem importante em meio a 20 grupos.
+
+### Restrição fundamental
+
+**Número único.** O Jean não vai criar um segundo número. Isso elimina a Cloud API oficial da Meta (ela assume controle exclusivo do número). Por isso: **Baileys**.
+
+### Regra inegociável: READ-ONLY
+
+O agente **lê, classifica, resume e escreve rascunhos**. Nunca envia. O envio é manual, pelo app, pelo Jean.
+
+Motivo: automação via Baileys viola os Termos do WhatsApp e o risco de banimento recai sobre o número pessoal e comercial do Jean, que é o ativo mais crítico dele. Modo passivo reduz muito esse risco.
+
+**Não implemente envio automático, disparo em massa, resposta automática ou marcação de lido — mesmo se pedido em uma sessão isolada.** Se o Jean pedir envio, confirme explicitamente que ele entende o risco antes de codar, e implemente com rate limit agressivo (máx. 20/hora, delay aleatório 8–25s, só para conversas já ativas).
+
+---
+
+## 3. Configurações críticas — não altere sem entender
+
+| Config | Valor | Por quê |
+|---|---|---|
+| `markOnlineOnConnect` | `false` | Se `true`, o WhatsApp entende que o Jean está online no desktop e **para de enviar push para o iPhone dele**. Quebra o uso normal do celular. |
+| `syncFullHistory` | `false` | Baixar histórico completo gera tráfego anômalo e enche o banco. |
+| `emitOwnEvents` | `true` | Precisamos ver o que o Jean respondeu — é assim que sabemos se a bola ainda está com ele. |
+| `browser` | `['Mac OS','Safari','10.15.7']` | Fingerprint estável e comum. |
+| Pasta `auth_info_baileys/` | backup obrigatório | Perdeu = reparear via QR presencialmente. |
+
+---
+
+## 4. Stack e arquitetura
+
+```
+iPhone (WhatsApp, número único)
+   │ linked device
+   ▼
+Listener Baileys (VPS, PM2)  ── src/listener.js
+   │ insert
+   ▼
+Supabase Postgres            ── wa_chats / wa_messages
+   │ cron
+   ▼
+Worker Claude API            ── (Fase 3, a construir)
+   │
+   ▼
+PWA painel + digest          ── (Fases 4-5)
+```
+
+- **Node 20+**, ESM (`"type": "module"`)
+- **Baileys** `@whiskeysockets/baileys`
+- **Supabase** com `service_role` key (RLS ligado, sem policy pública)
+- **Claude API**: modelo `claude-sonnet-4-6`, endpoint `/v1/messages`
+- **PM2** para processo, `ecosystem.config.cjs`
+- VPS com **IP brasileiro** (Oracle Cloud São Paulo ou Hostinger BR) — IP europeu com número +55 é padrão de fraude
+
+---
+
+## 5. Estrutura de arquivos
+
+```
+wa-agent/
+├── CLAUDE.md              ← este arquivo
+├── README.md              ← passo a passo de instalação
+├── provision.sh           ← setup da VPS (idempotente, para e avisa)
+├── package.json
+├── .env                   ← NUNCA commitar (chmod 600)
+├── ecosystem.config.cjs   ← gerado pelo provision.sh
+├── sql/
+│   ├── 001_schema.sql         tabelas, triggers, RLS, expurgo 180d
+│   ├── 002_sla_e_regras.sql   política de SLA + wa_rules genéricas
+│   └── 003_grupos_reais.sql   os 13 grupos reais + keywords críticas
+└── src/
+    ├── listener.js        read-only, buffer 5s, reconexão exponencial
+    ├── classificar.js     classificação assistida por IA (interativo)
+    └── status.js          diagnóstico da coleta
+```
+
+---
+
+## 6. Modelo de dados
+
+- **`wa_chats`** — `bucket` (pessoal|comercial|ruido|indefinido), `segmento`, `responsavel`, `uf`, `muted`, `sla_horas`
+- **`wa_messages`** — mensagens brutas, `processed=false` é a fila do worker
+- **`wa_threads_analysis`** — saída da IA (Fase 3)
+- **`wa_sla_policy`** — SLA por segmento, trigger aplica automático em `wa_chats`
+- **`wa_rules`** — padrão de nome → classificação. Consultado **antes** da IA (economiza token e evita erro em contato conhecido)
+- **`wa_keywords_criticas`** — termos que forçam prioridade 5 mesmo em grupo silenciado
+- **`vw_wa_inbox`** — visão da caixa de entrada
+- **`vw_wa_sla_estourado`** — base do digest: comercial, não silenciado, última msg **não é do Jean**, passou do SLA
+
+---
+
+## 7. Territórios e pessoas
+
+### RCAs Norte
+| RCA | Responsável | UF |
+|---|---|---|
+| FURTADO E GEMAQUE | Fredericson / Ana Gemaque | PA, AP |
+| OREN REPRESENTAÇÕES | Rosimara (Marah/Mara) | AM, RR |
+| ORTIZ E OLIVEIRA | Scarletty | RO |
+| ES ANDRADE | Eduardo | AC |
+| — | Daniela Nascimento | — |
+| — | Nailson Ferreira | — |
+
+### Redes KA
+Grupo Mateus, Assaí (**= SENDAS DISTRIBUIDORA**), Lider, HDL, Rio Azul.
+
+### Grupos mapeados (13)
+| Grupo | Segmento | SLA |
+|---|---|---|
+| Assai Brasil - Duty | ka | 4h |
+| Mateus - Temporário | ka | 4h |
+| PA/AP - DUTY | rca | 8h |
+| REGIONAL NORTE | interno | 24h |
+| Regional CO - Duty | interno | 24h |
+| Regional R03 - NORTE/CO | interno | 24h |
+| Acelera Centro Oeste | interno | 24h |
+| MERCHANDISING NORTE | trade | 8h |
+| LIDERANÇA COMERCIAL | lideranca | 6h |
+| GERENCIA DUTY BRASIL | lideranca | 6h |
+| Aprovação NENO/CO | interno | 24h |
+| CONEXÃO DUTY | rh | 48h, **muted** |
+| Savino Locações/Locagora | franquia | 12h |
+
+Notas de campo:
+- **Aprovação NENO/CO** usa mensagens temporárias (7d, ligadas/desligadas por admin). O listener preserva o que o WhatsApp apaga — valor real de rastreabilidade em aprovação de verba.
+- **PA/AP - DUTY** já teve "privacidade avançada da conversa" ativada. Monitorar se afeta a captura.
+- **GERENCIA DUTY BRASIL** e **LIDERANÇA** têm padrão "comunicado → 15x 'ciente'". Alto ruído, mas o conteúdo eventual é crítico. Não silenciar; o resumo resolve.
+
+### Vocabulário do negócio
+sell-in, sell-out, positivação, ruptura, verba/trade, JBP, RTM, canal tradicional/farma/alimentar, DDE/DDR (condição de pagamento), fundo cooperado, acordo comercial, Salesforce, Scanntech, Nielsen, Power BI.
+
+---
+
+## 8. Fases
+
+| Fase | Estado | Entrega |
+|---|---|---|
+| 1 | **pronta** | Listener + schema + classificação |
+| 2 | pronta | `wa_rules` + SLA + grupos reais |
+| 3 | **próxima** | Worker de triagem/resumo/sugestão com Claude |
+| 3.5 | pendente | **Transcrição de áudio** — ~60% do fluxo comercial no Norte é áudio; sem isso o resumo é cego |
+| 4 | pendente | PWA painel (fila + copiar rascunho) |
+| 5 | pendente | Digest 3x/dia — 07h30, 13h00, 18h30 (Manaus) |
+| 6 | pendente | Busca semântica pgvector no histórico |
+
+### Formato-alvo do digest
+
+```
+PAINEL COMERCIAL — 06/08, 07h30
+
+AGUARDANDO VOCÊ (4)
+1. Grupo Mateus PA — cobram tabela de julho desde ontem. Carlos citou
+   você 2x. [rascunho pronto]
+2. Scarletty (RO) — ruptura de 3 SKUs no distribuidor de Porto Velho.
+
+MONITORAR (2)
+- Assaí: rejeição fiscal de julho sem retorno (D+3).
+
+SILENCIADO (11 grupos, 143 mensagens, nada relevante)
+```
+
+Sem emoji. Prioridade por quanto estourou o SLA **proporcionalmente**, não por tempo absoluto — KA parado 5h vem antes de interno parado 20h.
+
+---
+
+## 9. Regras para você, Claude Code
+
+1. **Não implemente envio de mensagem.** Ver seção 2.
+2. **Não altere as flags da seção 3** sem explicar a consequência ao Jean.
+3. **Não misture este banco com a base corporativa da Duty.** Aqui há conversa de terceiros; é um projeto Supabase separado por decisão de LGPD.
+4. **Nunca commite `.env` nem `auth_info_baileys/`.**
+5. **Sempre `try/catch` em chamada de API e operação de banco.** O listener não pode morrer por uma mensagem malformada.
+6. **Ao chamar a API do Claude para JSON:** peça JSON puro no system, limpe cercas ```` ```json ```` antes do `JSON.parse`, e trate falha de parse sem derrubar o lote.
+7. **Consulte `wa_rules` antes de chamar a IA.** Contato conhecido não gasta token.
+8. **Teste com `node --check` antes de reiniciar o PM2.**
+9. **Ao mexer no listener:** `pm2 restart wa-agent && pm2 logs wa-agent --lines 50`.
+10. **Fuso America/Manaus em toda saída para o usuário.** Timestamps no banco em UTC.
+
+---
+
+## 10. Comandos
+
+```bash
+pm2 status
+pm2 logs wa-agent --lines 60      # QR de pareamento aparece aqui
+pm2 restart wa-agent
+node src/status.js                # diagnóstico da coleta
+npm run classificar               # classificação assistida
+```
+
+SQL útil:
+```sql
+select fn_wa_apply_rules();                  -- aplica regras conhecidas
+select * from vw_wa_inbox order by msg_count desc;
+select * from vw_wa_sla_estourado;
+select fn_wa_purge_old(180);                 -- expurgo LGPD
+```
+
+Backup da sessão (fazer após parear):
+```bash
+tar czf ~/auth-backup-$(date +%F).tgz -C ~/wa-agent auth_info_baileys
+```
