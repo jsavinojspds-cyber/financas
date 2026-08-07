@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/listener.js",
+    "testar": "node src/testar.js",
     "worker": "node src/worker.js",
     "digest": "node src/digest.js",
     "classificar": "node src/classificar.js",

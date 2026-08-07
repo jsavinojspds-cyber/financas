@@ -100,7 +100,35 @@ nano .env          # SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY
 bash provision.sh  # rode de novo
 ```
 
-### 3. Parear
+### 3. Testar antes de parear
+
+Assim que o `.env` estiver preenchido, confira a camada de banco **sem tocar no
+WhatsApp**:
+
+```bash
+npm run testar
+```
+
+Ele le o schema, escreve uma conversa e uma mensagem de teste, confere que os
+triggers e as regras rodaram, verifica se a conversa aparece no digest, e apaga
+tudo no fim. Se passar, o listener vai conseguir gravar — o que sobra de risco
+e so o pareamento.
+
+A falha mais comum e a anon key no lugar da service_role: o RLS esta ligado sem
+policy, entao a anon nao escreve nada e o sintoma aparece depois como "coleta
+vazia". O `testar` pega isso na hora.
+
+### Nao precisa de VPS para testar
+
+A VPS existe para uptime 24/7. Para **testar**, sua propria maquina serve — e
+se voce esta no Brasil, o IP residencial e um sinal melhor para o WhatsApp que
+um IP de datacenter. Rode `npm start` no seu notebook, pareie, veja a coleta
+funcionando, e so depois monte a VPS.
+
+Ao migrar, pareie de novo na VPS em vez de copiar `auth_info_baileys/`: a mesma
+sessao saltando de IP e o tipo de coisa que chama atencao.
+
+### 4. Parear
 
 ```bash
 pm2 start ecosystem.config.cjs
@@ -117,7 +145,9 @@ ele, a deteccao de mencao a voce (`@`) nao funciona.
 pm2 save && pm2 startup           # sobe sozinho apos reboot
 ```
 
-### 4. Backup da sessao — faca agora
+Na sua maquina, sem PM2, e so `npm start`.
+
+### 5. Backup da sessao — faca agora
 
 Perder `auth_info_baileys/` significa reparear via QR presencialmente.
 
@@ -128,6 +158,7 @@ tar czf ~/auth-backup-$(date +%F).tgz -C ~/wa-agent auth_info_baileys
 ## Uso
 
 ```bash
+npm run testar           # teste de conexao com o Supabase (nao toca no WhatsApp)
 npm run status           # diagnostico da coleta
 npm run classificar      # classificacao assistida por IA
 npm run worker           # triagem: resumo + rascunho
