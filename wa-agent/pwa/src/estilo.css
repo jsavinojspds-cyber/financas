@@ -1,0 +1,321 @@
+/* estilo.css — iOS, escuro, denso. Sem emoji, sem enfeite.
+   Feito para ser lido em 10 segundos, de pe, com uma mao. */
+
+:root {
+  --fundo: #0F141D;
+  --carta: #161D28;
+  --carta-borda: #232C3A;
+  --texto: #E9ECF2;
+  --texto-fraco: #93A0B4;
+  --ambar: #E0962A;
+  --vermelho: #E05252;
+  --azul: #4A8FE0;
+  --verde: #3FA96B;
+
+  --raio: 14px;
+  --gap: 12px;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --fundo: #F4F5F7;
+    --carta: #FFFFFF;
+    --carta-borda: #E2E5EA;
+    --texto: #131720;
+    --texto-fraco: #5F6B7E;
+    color-scheme: light;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: contain;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+}
+
+/* --- topo --- */
+.topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding-bottom: 16px;
+}
+
+.topo h1 { margin: 0; font-size: 21px; font-weight: 650; letter-spacing: -0.02em; }
+.quando { margin: 2px 0 0; font-size: 13px; color: var(--texto-fraco); }
+
+.atualizar {
+  flex: none;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--texto);
+  background: var(--carta);
+  border: 1px solid var(--carta-borda);
+  border-radius: 999px;
+}
+.atualizar:disabled { opacity: 0.5; }
+
+/* --- secoes --- */
+section { margin-bottom: 26px; }
+
+section h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}
+
+.conta {
+  padding: 1px 8px;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--fundo);
+  background: var(--texto-fraco);
+  border-radius: 999px;
+}
+
+/* --- cartao --- */
+.cartao {
+  margin-bottom: 10px;
+  padding: 14px;
+  background: var(--carta);
+  border: 1px solid var(--carta-borda);
+  border-radius: var(--raio);
+}
+
+.cartao header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.pos {
+  flex: none;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--texto-fraco);
+  font-variant-numeric: tabular-nums;
+}
+
+.cartao h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.selo {
+  flex: none;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 650;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.selo.critico   { color: #fff; background: var(--vermelho); }
+.selo.alto      { color: #241A05; background: var(--ambar); }
+.selo.estourado { color: var(--texto); background: var(--carta-borda); }
+.selo.ok        { display: none; }
+
+.resumo { margin: 0 0 10px; font-size: 15px; color: var(--texto); }
+
+.marcas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--texto-fraco);
+  font-variant-numeric: tabular-nums;
+}
+
+.tag {
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 550;
+  border-radius: 6px;
+}
+.tag.critica { color: #fff; background: var(--vermelho); }
+.tag.citou   { color: #fff; background: var(--azul); }
+
+/* --- rascunho --- */
+.rascunho {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--carta-borda);
+}
+
+.rascunho pre {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 15px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--texto);
+  background: var(--fundo);
+  border-radius: 10px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.copiar {
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #241A05;
+  background: var(--ambar);
+  border: none;
+  border-radius: 999px;
+}
+.copiar.feito { color: #fff; background: var(--verde); }
+
+.ver {
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--texto);
+  background: transparent;
+  border: 1px solid var(--carta-borda);
+  border-radius: 999px;
+}
+
+/* --- monitorar --- */
+/* Grade de duas linhas: nome e tempo em cima, descricao embaixo ocupando a
+   largura toda. Com flex, a descricao longa quebrava e a sobra ficava
+   centralizada no meio da linha, orfa. */
+.linha {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--carta-borda);
+}
+.linha:last-child { border-bottom: none; }
+
+.linha strong { grid-area: 1 / 1; font-size: 15px; font-weight: 600; }
+.linha em {
+  grid-area: 1 / 2;
+  font-style: normal;
+  font-size: 13px;
+  text-align: right;
+  color: var(--texto-fraco);
+  font-variant-numeric: tabular-nums;
+}
+.linha span {
+  grid-column: 1 / -1;
+  font-size: 14px;
+  color: var(--texto-fraco);
+}
+
+.vazio { margin: 0; font-size: 14px; color: var(--texto-fraco); }
+
+/* --- login e estados --- */
+.centro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 380px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 24px;
+}
+.centro h1 { margin: 0 0 8px; font-size: 24px; font-weight: 650; letter-spacing: -0.02em; }
+
+.ajuda { margin: 0 0 20px; font-size: 15px; color: var(--texto-fraco); }
+.ajuda.pad { padding: 0 16px; }
+
+.centro form { display: flex; flex-direction: column; gap: 10px; }
+
+input {
+  padding: 13px 14px;
+  font: inherit;
+  font-size: 16px; /* abaixo de 16 o iOS da zoom ao focar */
+  color: var(--texto);
+  background: var(--carta);
+  border: 1px solid var(--carta-borda);
+  border-radius: 12px;
+}
+input:focus { outline: 2px solid var(--azul); outline-offset: -1px; }
+
+.centro form button {
+  padding: 13px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #241A05;
+  background: var(--ambar);
+  border: none;
+  border-radius: 12px;
+}
+.centro form button:disabled { opacity: 0.6; }
+
+.secundario {
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 8px 14px;
+  font-size: 14px;
+  color: var(--texto-fraco);
+  background: transparent;
+  border: 1px solid var(--carta-borda);
+  border-radius: 999px;
+}
+
+.erro { margin: 14px 0 0; font-size: 14px; color: var(--vermelho); }
+
+.aviso {
+  padding: 14px;
+  margin-bottom: 20px;
+  background: var(--carta);
+  border: 1px solid var(--vermelho);
+  border-radius: var(--raio);
+}
+.aviso p { margin: 0; font-size: 14px; color: var(--vermelho); }
+
+code {
+  padding: 1px 5px;
+  font-size: 13px;
+  background: var(--carta);
+  border-radius: 5px;
+}
+
+footer {
+  padding-top: 20px;
+  margin-top: 8px;
+  border-top: 1px solid var(--carta-borda);
+}
+footer p { margin: 0 0 10px; font-size: 13px; color: var(--texto-fraco); }

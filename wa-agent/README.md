@@ -28,7 +28,7 @@ numero silenciosamente.
 | 3 | pronta | Worker de triagem/resumo/sugestao (`src/worker.js`) |
 | 3.5a | pronta | Leitura de imagem (`src/midia.js` + visao do Claude) |
 | 3.5b | adiada | Transcricao de audio — pipeline de texto primeiro |
-| 4 | proxima | PWA painel |
+| 4 | pronta | PWA painel (`pwa/`) |
 | 5 | pronta | Digest 3x/dia, 07h30 / 13h00 / 18h30 (`src/digest.js`) |
 | 6 | pendente | Busca semantica pgvector |
 
@@ -47,9 +47,10 @@ sql/002_sla_e_regras.sql  politica de SLA + wa_rules + views
 sql/003_grupos_reais.sql  os 13 grupos + RCAs + keywords criticas
 sql/004_digest.sql        vw_wa_digest + contagens do painel
 sql/005_seguranca.sql     revoga acesso de anon e authenticated
+sql/006_pwa.sql           whitelist + fn_wa_painel, para o PWA da Fase 4
 ```
 
-Os cinco sao idempotentes: rodar de novo nao duplica nada.
+Os seis sao idempotentes: rodar de novo nao duplica nada.
 
 Depois, em Settings > API, copie a **service_role** key. Nao e a anon. O RLS
 fica ligado sem policy publica, entao a anon key nao le nada de proposito.
@@ -76,9 +77,9 @@ select count(*) from information_schema.role_table_grants
    and grantee in ('anon','authenticated');
 ```
 
-Se um dia a Fase 4 (PWA) precisar ler do navegador, **nao** desfaca o 005. O
-caminho e um backend com service_role, ou policy explicita e estreita para
-`authenticated` — nunca devolver SELECT amplo para `anon`.
+O PWA da Fase 4 le do navegador **sem** desfazer nada disso: o `006` abre uma
+porta estreita — uma unica funcao, com whitelist de e-mail, que devolve o painel
+ja resumido. O navegador segue sem SELECT em tabela nenhuma. Ver `pwa/README.md`.
 
 ### 2. VPS
 
@@ -348,6 +349,16 @@ select * from fn_wa_purge_old(180);          -- expurgo LGPD
 `vw_wa_sla_estourado` ordena por estouro **proporcional**, nao por tempo
 absoluto: KA parado 5h (SLA 4h, razao 1.25) vem antes de interno parado 26h
 (SLA 24h, razao 1.08).
+
+## Painel no iPhone (Fase 4)
+
+O PWA vive em `pwa/`. Ele nao le tabela nenhuma: chama uma unica funcao,
+`fn_wa_painel`, que confere uma whitelist de e-mail antes de devolver o painel
+ja resumido. Instrucoes completas em `pwa/README.md`.
+
+```bash
+cd pwa && npm install && npm run dev
+```
 
 ## Estrutura
 

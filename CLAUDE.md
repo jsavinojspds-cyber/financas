@@ -63,7 +63,7 @@ Worker Claude API            ── src/worker.js (cron)
 Digest priorizado            ── src/digest.js (cron 3x/dia)
    │
    ▼
-PWA painel                   ── (Fase 4, a construir)
+PWA painel                   ── pwa/ (fn_wa_painel, whitelist)
 ```
 
 - **Node 20+**, ESM (`"type": "module"`)
@@ -97,20 +97,24 @@ financas/
     │   ├── 002_sla_e_regras.sql   política de SLA + wa_rules genéricas
     │   ├── 003_grupos_reais.sql   os 13 grupos reais + keywords críticas
     │   ├── 004_digest.sql         vw_wa_digest + contagens do painel
-    │   └── 005_seguranca.sql      revoga anon/authenticated
-    └── src/
-        ├── config.js      valida .env, avisa se a chave for anon
-        ├── tempo.js       UTC no banco → America/Manaus na saída
-        ├── mensagem.js    normaliza payload do Baileys, desembrulha efêmera
-        ├── db.js          acesso ao Supabase, nenhuma função lança
-        ├── claude.js      chamada à API + parse de JSON com retry
-        ├── midia.js       baixa e descriptografa imagem, sob demanda
-        ├── listener.js    read-only, buffer 5s, reconexão exponencial
-        ├── worker.js      triagem/resumo/sugestão (Fase 3)
-        ├── digest.js      painel priorizado (Fase 5)
-        ├── bomdia.js      rascunho de bom dia com contexto das 24h
-        ├── classificar.js classificação assistida por IA (interativo)
-        └── status.js      diagnóstico da coleta
+    │   ├── 005_seguranca.sql      revoga anon/authenticated
+    │   └── 006_pwa.sql            whitelist + fn_wa_painel (Fase 4)
+    ├── src/
+    │   ├── config.js      valida .env, avisa se a chave for anon
+    │   ├── tempo.js       UTC no banco → America/Manaus na saída
+    │   ├── mensagem.js    normaliza payload do Baileys, desembrulha efêmera
+    │   ├── db.js          acesso ao Supabase, nenhuma função lança
+    │   ├── claude.js      chamada à API + parse de JSON com retry
+    │   ├── midia.js       baixa e descriptografa imagem, sob demanda
+    │   ├── listener.js    read-only, buffer 5s, reconexão exponencial
+    │   ├── worker.js      triagem/resumo/sugestão (Fase 3)
+    │   ├── digest.js      painel priorizado (Fase 5)
+    │   ├── bomdia.js      rascunho de bom dia com contexto das 24h
+    │   ├── classificar.js classificação assistida por IA (interativo)
+    │   └── status.js      diagnóstico da coleta
+    └── pwa/               painel React + Vite (Fase 4)
+        ├── src/painel.js  MESMAS regras de ordem do digest.js — mude as duas
+        └── src/App.jsx    fila + copiar rascunho
 ```
 
 ---
@@ -125,6 +129,7 @@ financas/
 - **`wa_keywords_criticas`** — termos que forçam prioridade 5 mesmo em grupo silenciado
 - **`vw_wa_inbox`** — visão da caixa de entrada
 - **`vw_wa_sla_estourado`** — comercial, não silenciado, última msg **não é do Jean**, passou do SLA
+- **`wa_app_emails`** — quem pode abrir o PWA. O navegador não lê tabela: só chama `fn_wa_painel`, que confere esta lista antes de devolver qualquer coisa
 - **`vw_wa_digest`** — base do painel: a última análise de cada conversa + o estado atual dela. `aguardando_jean` vem da análise, `last_message_from_me` vem de agora — é o cruzamento que evita cobrar algo já respondido
 
 ---
@@ -180,9 +185,9 @@ sell-in, sell-out, positivação, ruptura, verba/trade, JBP, RTM, canal tradicio
 | 3 | pronta | Worker de triagem/resumo/sugestão com Claude — `src/worker.js` |
 | 3.5a | pronta | **Leitura de imagem** — worker baixa a foto e manda para o Claude ver. Foto no canal comercial é quase sempre documento: tabela, print de pedido, NF, gôndola com ruptura |
 | 3.5b | adiada | **Transcrição de áudio** — ~60% do fluxo comercial no Norte é áudio; sem isso o resumo é cego. Adiada por decisão do Jean: pipeline de texto primeiro. O worker já marca áudio como não transcrito no prompt, então o resumo avisa que está incompleto em vez de fingir que leu tudo |
-| 4 | **próxima** | PWA painel (fila + copiar rascunho) |
+| 4 | pronta | PWA painel — `pwa/`, React + Vite. Lê por `fn_wa_painel`, uma função com whitelist de e-mail; o navegador não tem SELECT em tabela nenhuma |
 | 5 | pronta | Digest 3x/dia — 07h30, 13h00, 18h30 (Manaus) — `src/digest.js` |
-| 6 | pendente | Busca semântica pgvector no histórico |
+| 6 | **próxima** | Busca semântica pgvector no histórico |
 
 ### Formato-alvo do digest
 
