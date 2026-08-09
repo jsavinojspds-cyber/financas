@@ -25,6 +25,13 @@ export const config = {
   meuJid: process.env.MEU_JID ?? '',
   // Grupo do rascunho de bom dia. Pedaco do nome basta.
   bomDiaGrupo: process.env.BOM_DIA_GRUPO || 'MERCHANDISING',
+
+  // Busca semantica (Fase 6). Sem chave, a busca roda so na metade textual.
+  // A dimensao TEM que bater com wa_messages.embedding, vector(1024) no 007.
+  embeddingKey: process.env.EMBEDDING_API_KEY ?? '',
+  embeddingModel: process.env.EMBEDDING_MODEL || 'voyage-3',
+  embeddingBaseUrl: process.env.EMBEDDING_BASE_URL || 'https://api.voyageai.com',
+  embeddingDim: inteiro(process.env.EMBEDDING_DIM, 1024),
   bufferMs: inteiro(process.env.BUFFER_MS, 5000),
   bufferMax: inteiro(process.env.BUFFER_MAX, 200),
   logLevel: process.env.LOG_LEVEL || 'info',

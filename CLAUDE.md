@@ -71,6 +71,7 @@ PWA painel                   ── pwa/ (fn_wa_painel, whitelist)
 - **Supabase** com `service_role` key (RLS ligado, sem policy pública). Projeto `ycakggiaklceubevkhag`, região us-west-2. **Não** é o `duty-rag` — esse é a base corporativa, separada por LGPD
 - **View precisa de `security_invoker = on`.** Sem isso ela é `SECURITY DEFINER` e fura o RLS das tabelas: a anon key (pública) lê tudo. Verificado e corrigido no `005`
 - **Claude API**: modelo `claude-sonnet-4-6`, endpoint `/v1/messages`
+- **Embeddings**: a Anthropic **não tem** API de embeddings. A Fase 6 usa fornecedor externo (padrão Voyage AI) e é **opcional** — sem chave, a busca roda só na metade textual
 - **PM2** para processo, `ecosystem.config.cjs`
 - VPS com **IP brasileiro** (Oracle Cloud São Paulo ou Hostinger BR) — IP europeu com número +55 é padrão de fraude
 
@@ -98,7 +99,8 @@ financas/
     │   ├── 003_grupos_reais.sql   os 13 grupos reais + keywords críticas
     │   ├── 004_digest.sql         vw_wa_digest + contagens do painel
     │   ├── 005_seguranca.sql      revoga anon/authenticated
-    │   └── 006_pwa.sql            whitelist + fn_wa_painel (Fase 4)
+    │   ├── 006_pwa.sql            whitelist + fn_wa_painel (Fase 4)
+    │   └── 007_busca.sql          pgvector + tsvector + RRF (Fase 6)
     ├── src/
     │   ├── config.js      valida .env, avisa se a chave for anon
     │   ├── tempo.js       UTC no banco → America/Manaus na saída
@@ -109,6 +111,9 @@ financas/
     │   ├── listener.js    read-only, buffer 5s, reconexão exponencial
     │   ├── worker.js      triagem/resumo/sugestão (Fase 3)
     │   ├── digest.js      painel priorizado (Fase 5)
+    │   ├── embeddings.js  vetores para a busca (fornecedor externo)
+    │   ├── indexar.js     gera embeddings do histórico
+    │   ├── buscar.js      busca no histórico (Fase 6)
     │   ├── bomdia.js      rascunho de bom dia com contexto das 24h
     │   ├── classificar.js classificação assistida por IA (interativo)
     │   └── status.js      diagnóstico da coleta
@@ -130,6 +135,8 @@ financas/
 - **`vw_wa_inbox`** — visão da caixa de entrada
 - **`vw_wa_sla_estourado`** — comercial, não silenciado, última msg **não é do Jean**, passou do SLA
 - **`wa_app_emails`** — quem pode abrir o PWA. O navegador não lê tabela: só chama `fn_wa_painel`, que confere esta lista antes de devolver qualquer coisa
+- **`wa_messages.busca`** — `tsvector` gerado, dicionário português. Sempre em dia, não precisa reindexar
+- **`wa_messages.embedding`** — `vector(1024)`, preenchido pelo `indexar.js`. Nulo é o normal enquanto não houver chave
 - **`vw_wa_digest`** — base do painel: a última análise de cada conversa + o estado atual dela. `aguardando_jean` vem da análise, `last_message_from_me` vem de agora — é o cruzamento que evita cobrar algo já respondido
 
 ---
@@ -187,7 +194,7 @@ sell-in, sell-out, positivação, ruptura, verba/trade, JBP, RTM, canal tradicio
 | 3.5b | adiada | **Transcrição de áudio** — ~60% do fluxo comercial no Norte é áudio; sem isso o resumo é cego. Adiada por decisão do Jean: pipeline de texto primeiro. O worker já marca áudio como não transcrito no prompt, então o resumo avisa que está incompleto em vez de fingir que leu tudo |
 | 4 | pronta | PWA painel — `pwa/`, React + Vite. Lê por `fn_wa_painel`, uma função com whitelist de e-mail; o navegador não tem SELECT em tabela nenhuma |
 | 5 | pronta | Digest 3x/dia — 07h30, 13h00, 18h30 (Manaus) — `src/digest.js` |
-| 6 | **próxima** | Busca semântica pgvector no histórico |
+| 6 | pronta | Busca no histórico — `src/buscar.js`. Textual em português **sem chave nenhuma**, mais semântica por pgvector quando houver `EMBEDDING_API_KEY`. As duas se fundem por RRF |
 
 ### Formato-alvo do digest
 
@@ -239,6 +246,8 @@ npm run worker                    # triagem: resumo + rascunho
 npm run worker -- --dry-run       # mostra o que faria, sem gravar
 npm run digest                    # o painel, no formato da seção 8
 npm run digest -- --bom-dia       # painel + rascunho de bom dia para o time
+npm run buscar -- "verba julho"   # busca no histórico
+npm run indexar                   # gera embeddings (opcional, precisa de chave)
 npm run check                     # node --check em todo src/
 ```
 

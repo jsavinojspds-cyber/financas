@@ -12,6 +12,8 @@
     "testar": "node src/testar.js",
     "worker": "node src/worker.js",
     "digest": "node src/digest.js",
+    "buscar": "node src/buscar.js",
+    "indexar": "node src/indexar.js",
     "classificar": "node src/classificar.js",
     "status": "node src/status.js",
     "check": "for f in src/*.js; do node --check \"$f\" || exit 1; done && echo 'sintaxe ok'"

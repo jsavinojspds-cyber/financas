@@ -30,7 +30,7 @@ numero silenciosamente.
 | 3.5b | adiada | Transcricao de audio — pipeline de texto primeiro |
 | 4 | pronta | PWA painel (`pwa/`) |
 | 5 | pronta | Digest 3x/dia, 07h30 / 13h00 / 18h30 (`src/digest.js`) |
-| 6 | pendente | Busca semantica pgvector |
+| 6 | pronta | Busca no historico (`src/buscar.js`) |
 
 ## Instalacao
 
@@ -48,9 +48,10 @@ sql/003_grupos_reais.sql  os 13 grupos + RCAs + keywords criticas
 sql/004_digest.sql        vw_wa_digest + contagens do painel
 sql/005_seguranca.sql     revoga acesso de anon e authenticated
 sql/006_pwa.sql           whitelist + fn_wa_painel, para o PWA da Fase 4
+sql/007_busca.sql         pgvector + tsvector + RRF, para a busca da Fase 6
 ```
 
-Os seis sao idempotentes: rodar de novo nao duplica nada.
+Os sete sao idempotentes: rodar de novo nao duplica nada.
 
 Depois, em Settings > API, copie a **service_role** key. Nao e a anon. O RLS
 fica ligado sem policy publica, entao a anon key nao le nada de proposito.
@@ -165,6 +166,7 @@ npm run status           # diagnostico da coleta
 npm run classificar      # classificacao assistida por IA
 npm run worker           # triagem: resumo + rascunho
 npm run digest           # o painel do dia
+npm run buscar -- "verba julho"   # busca no historico
 pm2 logs wa-agent --lines 60
 pm2 restart wa-agent
 ```
@@ -350,6 +352,50 @@ select * from fn_wa_purge_old(180);          -- expurgo LGPD
 absoluto: KA parado 5h (SLA 4h, razao 1.25) vem antes de interno parado 26h
 (SLA 24h, razao 1.08).
 
+## Busca no historico (Fase 6)
+
+```bash
+npm run buscar -- "tabela de julho"
+npm run buscar -- "ruptura" --dias 90 --comercial
+npm run buscar -- "verba" --chat '120363xxx@g.us'
+npm run buscar -- "NF 88231" --so-texto
+```
+
+Sao **duas buscas fundidas por RRF**:
+
+| Busca | Precisa de chave? | Boa em |
+|---|---|---|
+| Textual (tsvector, portugues) | **nao** | nome proprio, numero de NF, codigo, SKU. Faz stemming: "ruptura" acha "rupturas" |
+| Semantica (pgvector) | sim | significado. Acha "faltou na gondola" quando voce busca "ruptura" |
+
+Cada resultado vem marcado: `**` achou nas duas, `T` so no texto, `S` so na
+semantica.
+
+### Sem chave de embeddings
+
+**A busca textual funciona sozinha, e ja resolve bastante.** A Anthropic nao
+tem API de embeddings, entao a metade semantica exige um fornecedor a parte
+(o padrao aqui e a Voyage AI). Sem `EMBEDDING_API_KEY` no `.env`, o `buscar`
+roda so a metade textual e **diz isso** — nao finge que fez busca semantica.
+
+### Com chave
+
+```bash
+npm run indexar                 # gera os vetores do que ja foi coletado
+npm run indexar -- --dry-run    # mostra quanto gastaria, sem gravar
+```
+
+Pode interromper no meio: o que gravou fica, o resto volta na proxima. Nao ha
+estado fora do banco.
+
+Mensagem com menos de 20 caracteres nao vira vetor. "ok", "ciente" e "bom dia"
+sao um terco do trafego dos grupos de lideranca e nao carregam significado
+pesquisavel — ficam so na busca textual, que e de graca.
+
+**A dimensao tem que bater.** A coluna e `vector(1024)`, e o `embeddings.js`
+confere o que a API devolveu antes de gravar. Se voce trocar por um modelo de
+outra dimensao, ele para com mensagem clara em vez de gravar vetor torto.
+
 ## Painel no iPhone (Fase 4)
 
 O PWA vive em `pwa/`. Ele nao le tabela nenhuma: chama uma unica funcao,
@@ -383,6 +429,9 @@ wa-agent/
     ├── listener.js        read-only, buffer 5s, reconexao exponencial
     ├── worker.js          triagem/resumo/sugestao (Fase 3)
     ├── digest.js          painel priorizado (Fase 5)
+    ├── embeddings.js      vetores para a busca (fornecedor externo)
+    ├── indexar.js         gera embeddings do historico
+    ├── buscar.js          busca no historico (Fase 6)
     ├── bomdia.js          rascunho de bom dia com contexto das 24h
     ├── classificar.js     classificacao assistida (interativo)
     └── status.js          diagnostico da coleta

@@ -140,6 +140,18 @@ export async function marcarProcessadas(ids) {
   }
 }
 
+/** Chamada generica de funcao no banco. Nunca lanca. */
+export async function rpc(nome, params = {}) {
+  try {
+    const { data, error } = await cliente().rpc(nome, params);
+    if (error) throw error;
+    return { ok: true, dados: data };
+  } catch (err) {
+    console.error(`[db] rpc ${nome} falhou:`, err?.message ?? err);
+    return { ok: false, dados: null, erro: String(err?.message ?? err) };
+  }
+}
+
 /** Leitura generica com tratamento de erro uniforme. */
 export async function consultar(tabela, montar = (q) => q) {
   try {
