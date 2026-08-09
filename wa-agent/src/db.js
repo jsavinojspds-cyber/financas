@@ -2,15 +2,42 @@
 // nunca lanca. O listener nao pode morrer por causa do banco (CLAUDE.md 5).
 
 import { createClient } from '@supabase/supabase-js';
-import { config, exigir, avisarSeAnonKey } from './config.js';
+import { config, exigir, avisarSeAnonKey, avisarSeAmbienteVence } from './config.js';
 
 let _cliente = null;
+
+/**
+ * Transforma o erro do supabase-js em algo legivel.
+ *
+ * O cliente devolve `{}` vazio quando a resposta nao e JSON — tipico de URL
+ * errada, projeto pausado ou proxy no caminho. Sem isto a mensagem sai como
+ * "[object Object]" e nao ajuda ninguem a consertar nada.
+ */
+export function descreverErro(err) {
+  if (err == null) return 'erro desconhecido';
+  if (typeof err === 'string') return err;
+
+  const partes = [err.message, err.details, err.hint].filter(Boolean);
+  if (partes.length > 0) {
+    return partes.join(' — ') + (err.code ? ` (${err.code})` : '');
+  }
+  if (err.code) return `codigo ${err.code}`;
+
+  // Objeto vazio: quase sempre a resposta nao foi JSON.
+  try {
+    const j = JSON.stringify(err);
+    if (j && j !== '{}') return j.slice(0, 200);
+  } catch { /* objeto circular */ }
+
+  return 'resposta invalida do servidor — confira SUPABASE_URL e se o projeto nao esta pausado';
+}
 
 export function cliente() {
   if (_cliente) return _cliente;
 
   exigir(['supabaseUrl', 'supabaseKey']);
   avisarSeAnonKey();
+  avisarSeAmbienteVence();
 
   _cliente = createClient(config.supabaseUrl, config.supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -56,8 +83,8 @@ export async function salvarChats(chats) {
 
     return { ok: true };
   } catch (err) {
-    console.error('[db] salvarChats falhou:', err?.message ?? err);
-    return { ok: false, erro: String(err?.message ?? err) };
+    console.error('[db] salvarChats falhou:', descreverErro(err));
+    return { ok: false, erro: descreverErro(err) };
   }
 }
 
@@ -80,8 +107,8 @@ export async function salvarMensagens(linhas) {
     if (error) throw error;
     return { ok: true, gravadas: data?.length ?? 0 };
   } catch (err) {
-    console.error('[db] salvarMensagens falhou:', err?.message ?? err);
-    return { ok: false, gravadas: 0, erro: String(err?.message ?? err) };
+    console.error('[db] salvarMensagens falhou:', descreverErro(err));
+    return { ok: false, gravadas: 0, erro: descreverErro(err) };
   }
 }
 
@@ -92,8 +119,8 @@ export async function aplicarRegras() {
     if (error) throw error;
     return { ok: true, aplicadas: data ?? [] };
   } catch (err) {
-    console.error('[db] aplicarRegras falhou:', err?.message ?? err);
-    return { ok: false, aplicadas: [], erro: String(err?.message ?? err) };
+    console.error('[db] aplicarRegras falhou:', descreverErro(err));
+    return { ok: false, aplicadas: [], erro: descreverErro(err) };
   }
 }
 
@@ -107,8 +134,8 @@ export async function salvarAnalise(linha) {
     if (error) throw error;
     return { ok: true };
   } catch (err) {
-    console.error('[db] salvarAnalise falhou:', err?.message ?? err);
-    return { ok: false, erro: String(err?.message ?? err) };
+    console.error('[db] salvarAnalise falhou:', descreverErro(err));
+    return { ok: false, erro: descreverErro(err) };
   }
 }
 
@@ -135,8 +162,8 @@ export async function marcarProcessadas(ids) {
     }
     return { ok: true, marcadas };
   } catch (err) {
-    console.error('[db] marcarProcessadas falhou:', err?.message ?? err);
-    return { ok: false, marcadas, erro: String(err?.message ?? err) };
+    console.error('[db] marcarProcessadas falhou:', descreverErro(err));
+    return { ok: false, marcadas, erro: descreverErro(err) };
   }
 }
 
@@ -147,8 +174,8 @@ export async function rpc(nome, params = {}) {
     if (error) throw error;
     return { ok: true, dados: data };
   } catch (err) {
-    console.error(`[db] rpc ${nome} falhou:`, err?.message ?? err);
-    return { ok: false, dados: null, erro: String(err?.message ?? err) };
+    console.error(`[db] rpc ${nome} falhou:`, descreverErro(err));
+    return { ok: false, dados: null, erro: descreverErro(err) };
   }
 }
 
@@ -159,8 +186,8 @@ export async function consultar(tabela, montar = (q) => q) {
     if (error) throw error;
     return { ok: true, linhas: data ?? [] };
   } catch (err) {
-    console.error(`[db] consulta em ${tabela} falhou:`, err?.message ?? err);
-    return { ok: false, linhas: [], erro: String(err?.message ?? err) };
+    console.error(`[db] consulta em ${tabela} falhou:`, descreverErro(err));
+    return { ok: false, linhas: [], erro: descreverErro(err) };
   }
 }
 
@@ -172,7 +199,7 @@ export async function contar(tabela, montar = (q) => q) {
     if (error) throw error;
     return { ok: true, total: count ?? 0 };
   } catch (err) {
-    console.error(`[db] contagem em ${tabela} falhou:`, err?.message ?? err);
-    return { ok: false, total: 0, erro: String(err?.message ?? err) };
+    console.error(`[db] contagem em ${tabela} falhou:`, descreverErro(err));
+    return { ok: false, total: 0, erro: descreverErro(err) };
   }
 }

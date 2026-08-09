@@ -1,9 +1,15 @@
 // config.js — carrega e valida o .env. Falha cedo e com mensagem util,
 // em vez de estourar la na primeira query.
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// O dotenv NAO sobrescreve variavel que ja existe no ambiente — o ambiente
+// vence, sempre. Guardamos o que o arquivo dizia para poder avisar quando o
+// .env estiver sendo ignorado em silencio, que e o tipo de coisa que custa
+// meia hora de diagnostico.
+const { parsed: doArquivo = {} } = dotenv.config();
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 
@@ -56,6 +62,25 @@ export function exigir(obrigatorias) {
   console.error('\nCorrija com:');
   console.error('  cp .env.example .env && chmod 600 .env\n');
   process.exit(1);
+}
+
+/**
+ * Avisa quando uma variavel do .env esta sendo ignorada porque o ambiente ja
+ * tinha outra. Nunca imprime valor: so o nome.
+ */
+export function avisarSeAmbienteVence() {
+  const ignoradas = Object.entries(doArquivo)
+    .filter(([k, v]) => v !== '' && process.env[k] !== v)
+    .map(([k]) => k);
+
+  if (ignoradas.length === 0) return;
+
+  console.warn(
+    `\nAVISO: o ambiente ja definia ${ignoradas.join(', ')}, ` +
+    'entao o valor do .env foi ignorado.\n' +
+    'O dotenv nunca sobrescreve variavel existente. Se o .env e quem manda,\n' +
+    `limpe do ambiente:  unset ${ignoradas.join(' ')}\n`,
+  );
 }
 
 // Erro comum: colar a anon key no lugar da service_role. O RLS esta ligado
