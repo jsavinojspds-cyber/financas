@@ -59,8 +59,19 @@ export function exigir(obrigatorias) {
 
   console.error('\nFaltam variaveis no .env:');
   for (const k of faltando) console.error(`  - ${nomesEnv[k] ?? k}`);
-  console.error('\nCorrija com:');
-  console.error('  cp .env.example .env && chmod 600 .env\n');
+
+  // A dica precisa ser do sistema de quem esta lendo. Mandar `cp` e `chmod`
+  // para quem esta no Prompt de Comando so atrapalha.
+  if (process.platform === 'win32') {
+    console.error('\nSe o .env ainda nao existe:');
+    console.error('  copy .env.example .env');
+    console.error('\nPara editar:');
+    console.error('  notepad .env\n');
+  } else {
+    console.error('\nSe o .env ainda nao existe:');
+    console.error('  cp .env.example .env && chmod 600 .env\n');
+  }
+
   process.exit(1);
 }
 

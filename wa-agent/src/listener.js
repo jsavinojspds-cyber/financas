@@ -34,6 +34,12 @@ import { completo, hora } from './tempo.js';
 
 const log = pino({ level: config.logLevel });
 
+// O Baileys loga MUITO em nivel info: cada notificacao de sincronizacao de
+// historico vira uma linha enorme de JSON cru. Isso afoga as mensagens que
+// importam — "conectado", "lote gravado", "regra aplicada". Ele fica em
+// `warn`, que ainda mostra problema de verdade. LOG_BAILEYS=info para depurar.
+const logBaileys = pino({ level: process.env.LOG_BAILEYS || 'warn' });
+
 // --- estado do processo -----------------------------------------------------
 const buffer = [];                 // mensagens aguardando gravacao
 const chatsVistos = new Map();     // chat_id -> { nome, is_group }
@@ -164,9 +170,9 @@ async function conectar() {
       version,
       auth: {
         creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, log),
+        keys: makeCacheableSignalKeyStore(state.keys, logBaileys),
       },
-      logger: log,
+      logger: logBaileys,
 
       // ---------------------------------------------------------------
       // FLAGS CRITICAS — CLAUDE.md secao 3.
