@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { supabase, configurado, buscarPainel, entrar, sair } from './supabase.js';
+import { supabase, configurado, buscarPainel, entrar, verificarCodigo, sair } from './supabase.js';
 import { separar, rotulo, decorrido, dataHora, nivelSla } from './painel.js';
 
 // ---------------------------------------------------------------------------
@@ -82,8 +82,15 @@ function Cartao({ c, posicao, mencoes }) {
 // ---------------------------------------------------------------------------
 // Login
 // ---------------------------------------------------------------------------
+// Codigo, nao link.
+//
+// Instalado na tela inicial, o iOS da ao PWA um armazenamento SEPARADO do
+// Safari — e o link do e-mail sempre abre no Safari. A sessao caia do lado
+// errado e o app pedia e-mail de novo, para sempre. O codigo de 6 digitos e
+// digitado aqui dentro, entao a sessao nasce no armazenamento certo.
 function Login() {
   const [email, setEmail] = useState('');
+  const [codigo, setCodigo] = useState('');
   const [estado, setEstado] = useState('parado');
   const [erro, setErro] = useState(null);
 
@@ -94,20 +101,54 @@ function Login() {
     setErro(null);
 
     const r = await entrar(email.trim());
-    if (r.ok) setEstado('enviado');
+    if (r.ok) { setCodigo(''); setEstado('enviado'); }
     else { setEstado('parado'); setErro(r.erro); }
   }
 
-  if (estado === 'enviado') {
+  async function conferir(e) {
+    e.preventDefault();
+    if (codigo.replace(/\D/g, '').length < 6) return;
+    setEstado('verificando');
+    setErro(null);
+
+    // Sucesso nao mexe no estado: o onAuthStateChange do App troca a tela.
+    const r = await verificarCodigo(email.trim(), codigo);
+    if (!r.ok) { setEstado('enviado'); setErro(r.erro); }
+  }
+
+  if (estado === 'enviado' || estado === 'verificando') {
     return (
       <div className="centro">
-        <h1>Confira o e-mail</h1>
+        <h1>Digite o código</h1>
         <p className="ajuda">
-          Mandei um link de acesso para <strong>{email}</strong>. Abra pelo
-          próprio iPhone para o painel já entrar logado.
+          Mandei um código de 6 dígitos para <strong>{email}</strong>. Digite
+          aqui dentro do app — não abra o link do e-mail.
         </p>
-        <button type="button" className="secundario" onClick={() => setEstado('parado')}>
-          Usar outro e-mail
+        <form onSubmit={conferir}>
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]*"
+            maxLength={6}
+            className="codigo"
+            placeholder="000000"
+            value={codigo}
+            onChange={(ev) => setCodigo(ev.target.value.replace(/\D/g, '').slice(0, 6))}
+            required
+            autoFocus
+          />
+          <button type="submit" disabled={estado === 'verificando' || codigo.length < 6}>
+            {estado === 'verificando' ? 'Conferindo...' : 'Entrar'}
+          </button>
+        </form>
+        {erro && <p className="erro">{erro}</p>}
+        <button
+          type="button"
+          className="secundario"
+          onClick={() => { setErro(null); setEstado('parado'); }}
+        >
+          Pedir outro código
         </button>
       </div>
     );
@@ -116,7 +157,7 @@ function Login() {
   return (
     <div className="centro">
       <h1>Painel Comercial</h1>
-      <p className="ajuda">Entre com o e-mail autorizado. Sem senha: chega um link.</p>
+      <p className="ajuda">Entre com o e-mail autorizado. Sem senha: chega um código.</p>
       <form onSubmit={enviar}>
         <input
           type="email"
@@ -128,7 +169,7 @@ function Login() {
           required
         />
         <button type="submit" disabled={estado === 'enviando'}>
-          {estado === 'enviando' ? 'Enviando...' : 'Receber link'}
+          {estado === 'enviando' ? 'Enviando...' : 'Receber código'}
         </button>
       </form>
       {erro && <p className="erro">{erro}</p>}

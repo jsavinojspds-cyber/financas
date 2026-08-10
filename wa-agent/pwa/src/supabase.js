@@ -37,6 +37,14 @@ export async function buscarPainel(horas = 24) {
   }
 }
 
+/**
+ * Pede o codigo de acesso por e-mail.
+ *
+ * O e-mail traz um codigo de 6 digitos E um link. O codigo e o que importa
+ * aqui: instalado na tela inicial, o iOS da ao app um armazenamento SEPARADO
+ * do Safari, e o link do e-mail sempre abre no Safari. Sem o codigo, seria
+ * impossivel completar o login de dentro do app.
+ */
 export async function entrar(email) {
   if (!supabase) return { ok: false, erro: 'app sem configuracao' };
   try {
@@ -47,8 +55,32 @@ export async function entrar(email) {
     if (error) throw error;
     return { ok: true };
   } catch (err) {
-    return { ok: false, erro: String(err?.message ?? err) };
+    return { ok: false, erro: traduzir(err) };
   }
+}
+
+/** Confere o codigo de 6 digitos digitado no proprio app. */
+export async function verificarCodigo(email, codigo) {
+  if (!supabase) return { ok: false, erro: 'app sem configuracao' };
+  try {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: String(codigo).replace(/\D/g, ''),
+      type: 'email',
+    });
+    if (error) throw error;
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, erro: traduzir(err) };
+  }
+}
+
+function traduzir(err) {
+  const m = String(err?.message ?? err);
+  if (/expired/i.test(m)) return 'Código expirado. Peça um novo.';
+  if (/invalid/i.test(m)) return 'Código incorreto. Confira os 6 dígitos.';
+  if (/rate|limit/i.test(m)) return 'Muitas tentativas. Espere um minuto.';
+  return m;
 }
 
 export async function sair() {

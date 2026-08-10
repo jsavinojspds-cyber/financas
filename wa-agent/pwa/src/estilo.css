@@ -273,6 +273,15 @@ input {
 }
 input:focus { outline: 2px solid var(--azul); outline-offset: -1px; }
 
+/* Codigo de 6 digitos: grande e espacado, para conferir de relance. */
+input.codigo {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-align: center;
+  text-indent: 0.28em; /* compensa o espaco sobrando depois do ultimo digito */
+}
+
 .centro form button {
   padding: 13px;
   font-size: 16px;
