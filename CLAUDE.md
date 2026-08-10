@@ -100,7 +100,8 @@ financas/
     │   ├── 004_digest.sql         vw_wa_digest + contagens do painel
     │   ├── 005_seguranca.sql      revoga anon/authenticated
     │   ├── 006_pwa.sql            whitelist + fn_wa_painel (Fase 4)
-    │   └── 007_busca.sql          pgvector + tsvector + RRF (Fase 6)
+    │   ├── 007_busca.sql          pgvector + tsvector + RRF (Fase 6)
+    │   └── 008_chamado_direto.sql menção/resposta viram prioridade
     ├── src/
     │   ├── config.js      valida .env, avisa se a chave for anon
     │   ├── tempo.js       UTC no banco → America/Manaus na saída
@@ -132,6 +133,8 @@ financas/
 - **`wa_sla_policy`** — SLA por segmento, trigger aplica automático em `wa_chats`
 - **`wa_rules`** — padrão de nome → classificação. Consultado **antes** da IA (economiza token e evita erro em contato conhecido)
 - **`wa_keywords_criticas`** — termos que forçam prioridade 5 mesmo em grupo silenciado
+- **`wa_messages.mencionou_me` / `respondeu_me`** — marcaram o Jean com `@`, ou responderam uma mensagem dele. Juntos são o **chamado direto**, o sinal mais forte de que a bola está com ele: é explícito, não inferido. Depende de `MEU_JID` estar no `.env` — sem isso os dois ficam `false` para sempre e o painel volta a ser regido só por SLA
+- **`wa_threads_analysis.chamado_direto`** — houve chamado e o Jean ainda não voltou a falar. Força `aguardando_jean`, levanta a prioridade (5 se tem `?`, senão 4), fura grupo silenciado e sobe a conversa para o topo da ordenação
 - **`vw_wa_inbox`** — visão da caixa de entrada
 - **`vw_wa_sla_estourado`** — comercial, não silenciado, última msg **não é do Jean**, passou do SLA
 - **`wa_app_emails`** — quem pode abrir o PWA. O navegador não lê tabela: só chama `fn_wa_painel`, que confere esta lista antes de devolver qualquer coisa
@@ -212,7 +215,17 @@ MONITORAR (2)
 SILENCIADO (11 grupos, 143 mensagens, nada relevante)
 ```
 
-Sem emoji. Prioridade por quanto estourou o SLA **proporcionalmente**, não por tempo absoluto — KA parado 5h vem antes de interno parado 20h.
+Sem emoji.
+
+Ordem: **destaque**, depois SLA **proporcional**, depois prioridade. Proporcional e não absoluto — KA parado 5h vem antes de interno parado 20h.
+
+Destaque são os dois casos em que o relógio de SLA mente:
+- **keyword crítica** — ruptura, rejeição fiscal, pedido bloqueado. Perde dinheiro por hora parada, não por fração de SLA.
+- **chamado direto** — marcaram o Jean ou responderam a ele.
+
+Sem o destaque, uma pergunta direta feita agora num grupo interno sai com razão 0,01x e afunda atrás de tudo. Foi exatamente o que aconteceu no teste de 10/08 (`@Jean a meta é positivação ou valor?` no REGIONAL NORTE). A menção era contada e virava etiqueta, mas etiqueta não ordena nada. Corrigido no `008`.
+
+**A mesma regra vive em dois arquivos** — `src/digest.js` e `pwa/src/painel.js`. Mudou um, mude o outro.
 
 ---
 

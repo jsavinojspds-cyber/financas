@@ -37,15 +37,29 @@ function args() {
 // --- montagem ---------------------------------------------------------------
 
 /**
- * Ordem do painel. Keyword critica primeiro, depois estouro proporcional
- * de SLA, depois prioridade. Conversa sem SLA definido vai para o fim: nao
- * da para dizer que estourou algo que nao tem prazo.
+ * Ordem do painel: destaque, depois estouro proporcional de SLA, depois
+ * prioridade. Conversa sem SLA definido vai para o fim — nao da para dizer
+ * que estourou algo que nao tem prazo.
+ *
+ * DESTAQUE sao os dois casos em que o relogio de SLA mente:
+ *
+ *   keyword critica  ruptura, rejeicao fiscal, pedido bloqueado. Perde
+ *                    dinheiro por hora parada, nao por fracao de SLA.
+ *   chamado direto   marcaram o Jean ou responderam a ele. Explicito, nao
+ *                    inferido — vale mais que qualquer heuristica.
+ *
+ * Sem esse primeiro criterio, uma pergunta direta feita agora num grupo
+ * interno (SLA 24h) sai com razao 0,01x e afunda atras de tudo. Foi o que
+ * aconteceu no teste de 10/08 com o REGIONAL NORTE. Ver sql/008.
  */
 export function ordenar(itens) {
+  const destaque = (c) =>
+    ((c.keywords_criticas?.length ?? 0) > 0 || c.chamado_direto === true) ? 1 : 0;
+
   return [...itens].sort((a, b) => {
-    const critA = (a.keywords_criticas?.length ?? 0) > 0 ? 1 : 0;
-    const critB = (b.keywords_criticas?.length ?? 0) > 0 ? 1 : 0;
-    if (critA !== critB) return critB - critA;
+    const dA = destaque(a);
+    const dB = destaque(b);
+    if (dA !== dB) return dB - dA;
 
     const slaA = a.razao_sla ?? -1;
     const slaB = b.razao_sla ?? -1;
@@ -84,9 +98,14 @@ export function separar(linhas) {
     const slaEstourado = bolaComEle && (c.razao_sla ?? 0) > 1;
 
     // Nao exige resposta, mas nao pode sumir de vista.
+    //
+    // `chamado_direto` so vale enquanto a bola esta com ele, igual ao SLA: o
+    // chamado se resolve quando o Jean fala. Ja keyword e prioridade valem
+    // sempre — uma ruptura nao acaba porque ele respondeu alguma coisa.
     const relevante =
       (c.prioridade ?? 0) >= 4 ||
       (c.keywords_criticas?.length ?? 0) > 0 ||
+      (c.chamado_direto === true && bolaComEle) ||
       slaEstourado;
 
     if (relevante) monitorar.push(c);
@@ -149,10 +168,11 @@ export function formatar({ aguardando, monitorar, silenciadas, mencoes, janelaHo
 
       const citou = mencoes.get(c.chat_id);
       if (citou > 0) {
-        partes.push(citou === 1 ? 'Citou você 1x.' : `Citou você ${citou}x.`);
+        partes.push(citou === 1 ? 'Chamou você 1x.' : `Chamou você ${citou}x.`);
       }
 
       const marcas = [];
+      if (c.chamado_direto) marcas.push('chamaram você');
       if (c.rascunho) marcas.push('rascunho pronto');
       if (c.keywords_criticas?.length) marcas.push(c.keywords_criticas.join(', '));
       if (marcas.length) partes.push(`[${marcas.join(' | ')}]`);

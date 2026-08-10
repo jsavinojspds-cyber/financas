@@ -163,7 +163,9 @@ section h2 {
   border-radius: 6px;
 }
 .tag.critica { color: #fff; background: var(--vermelho); }
-.tag.citou   { color: #fff; background: var(--azul); }
+.tag.chamado { color: #fff; background: var(--azul); }
+/* Só o contador, ao lado de "chamaram você". Discreto de propósito. */
+.tag.citou   { color: var(--azul); background: transparent; border: 1px solid var(--azul); }
 
 /* --- rascunho --- */
 .rascunho {

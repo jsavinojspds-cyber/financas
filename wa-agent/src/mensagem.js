@@ -127,6 +127,13 @@ export function normalizar(msg, meuJid) {
       mencionou_me: Boolean(
         meuJid && mencoes.some((j) => normalizarJid(j) === meuJid),
       ),
+      // Responder uma mensagem do Jean e chama-lo, mesmo sem o @. No grupo
+      // grande e ate mais comum que a marcacao: a pessoa segura a mensagem
+      // dele e responde ali. `contextInfo.participant` e quem escreveu a
+      // mensagem citada.
+      respondeu_me: Boolean(
+        meuJid && ctx?.participant && normalizarJid(ctx.participant) === meuJid,
+      ),
       timestamp: paraIso(msg.messageTimestamp),
       raw: enxugar(msg),
       processed: false,

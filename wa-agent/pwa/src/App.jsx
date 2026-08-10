@@ -60,7 +60,8 @@ function Cartao({ c, posicao, mencoes }) {
           {c.sla_horas ? ` · SLA ${c.sla_horas}h` : ''}
           {c.segmento ? ` · ${c.segmento}` : ''}
         </span>
-        {citou > 0 && <span className="tag citou">citou você {citou}x</span>}
+        {c.chamado_direto && <span className="tag chamado">chamaram você</span>}
+        {citou > 0 && <span className="tag citou">{citou}x</span>}
         {(c.keywords_criticas ?? []).map((k) => (
           <span key={k} className="tag critica">{k}</span>
         ))}

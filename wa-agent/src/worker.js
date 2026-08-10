@@ -49,6 +49,12 @@ true quando alguem pediu algo a ele e ele ainda nao respondeu, ou quando o
 assunto so anda com uma decisao dele. false quando a ultima palavra foi dele,
 quando e so comunicado, ou quando a acao esta com outra pessoa.
 
+CHAMADO DIRETO
+[CITOU O JEAN] e [RESPONDEU O JEAN] marcam quem falou COM ele, nao perto dele.
+Se houver um desses sem resposta dele depois, a bola esta com ele — trate
+como aguardando_jean e escreva o rascunho respondendo exatamente o que foi
+perguntado. Num grupo de 40 pessoas e o unico jeito de saber o que e para ele.
+
 RASCUNHO — como o Jean escreve
 - portugues brasileiro, direto, frases curtas
 - sem emoji
@@ -113,11 +119,44 @@ export function acharKeywords(mensagens, keywords) {
   return [...achadas];
 }
 
+// --- chamado direto ---------------------------------------------------------
+/**
+ * Chamaram o Jean e ele ainda nao voltou a falar?
+ *
+ * Chamar = marcar com @ ou responder uma mensagem dele. E o sinal mais forte
+ * de que a bola esta com ele, porque e explicito — nao depende de a IA inferir
+ * nada nem de relogio de SLA.
+ *
+ * Qualquer mensagem dele zera: se o Jean falou depois que o chamaram, ele ja
+ * viu. Nao interessa se respondeu bem, interessa que a conversa andou.
+ *
+ * @param {object[]} mensagens em ordem crescente de tempo
+ * @returns {{houve: boolean, pergunta: boolean, quem: string|null}}
+ */
+export function chamadoDireto(mensagens = []) {
+  let alvo = null;
+
+  for (const m of mensagens) {
+    if (m.from_me) { alvo = null; continue; }
+    if (m.mencionou_me || m.respondeu_me) alvo = m;
+  }
+
+  if (!alvo) return { houve: false, pergunta: false, quem: null };
+
+  return {
+    houve: true,
+    // Pergunta direta e mais urgente que ser citado de passagem num
+    // comunicado. O "?" e grosseiro, mas erra para o lado seguro.
+    pergunta: /\?/.test(alvo.conteudo ?? ''),
+    quem: alvo.sender_name ?? null,
+  };
+}
+
 // --- decisao de triagem -----------------------------------------------------
 /**
  * @returns {{acao: 'ia'|'descartar'|'segurar', motivo: string}}
  */
-export function decidir(chat, keywordsAchadas) {
+export function decidir(chat, keywordsAchadas, chamado = { houve: false }) {
   if (!chat) return { acao: 'segurar', motivo: 'conversa desconhecida' };
 
   if (chat.classificado_por === 'nenhum' || chat.bucket === 'indefinido') {
@@ -133,6 +172,12 @@ export function decidir(chat, keywordsAchadas) {
   if (silenciado) {
     if (keywordsAchadas.length > 0) {
       return { acao: 'ia', motivo: `silenciado, mas bateu: ${keywordsAchadas.join(', ')}` };
+    }
+    // Segundo furo do silenciamento: chamar o Jean pelo nome. Silenciar um
+    // grupo diz "nao me avise de tudo", nao "nao me avise quando falarem
+    // comigo". CONEXAO DUTY e muted e mesmo assim pode ter RH cobrando ele.
+    if (chamado.houve) {
+      return { acao: 'ia', motivo: `silenciado, mas ${chamado.quem ?? 'alguem'} chamou voce` };
     }
     return { acao: 'descartar', motivo: chat.muted ? 'silenciado' : 'ruido' };
   }
@@ -168,7 +213,9 @@ export function montarPrompt(chat, mensagens, keywordsAchadas, imagens = []) {
       }
 
       const citada = m.citada ? ` (respondendo: "${m.citada.slice(0, 120)}")` : '';
-      const arroba = m.mencionou_me ? ' [CITOU O JEAN]' : '';
+      const arroba = m.from_me
+        ? ''
+        : (m.mencionou_me ? ' [CITOU O JEAN]' : (m.respondeu_me ? ' [RESPONDEU O JEAN]' : ''));
       return `[${hora(m.timestamp)}] ${quem}${arroba}: ${texto}${citada}`;
     })
     .join('\n');
@@ -220,7 +267,7 @@ export function montarPrompt(chat, mensagens, keywordsAchadas, imagens = []) {
 }
 
 // --- validacao da saida da IA -----------------------------------------------
-export function validar(bruto, keywordsAchadas) {
+export function validar(bruto, keywordsAchadas, chamado = { houve: false }) {
   const texto = (v, max) =>
     typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null;
 
@@ -231,19 +278,28 @@ export function validar(bruto, keywordsAchadas) {
   // e mesmo em grupo silenciado (CLAUDE.md secao 6).
   if (keywordsAchadas.length > 0) prioridade = 5;
 
+  // Chamado direto tambem manda, mas so levanta — nunca abaixa. Pergunta
+  // direta com o nome dele vai a 5; ser citado de passagem, a 4.
+  if (chamado.houve) {
+    prioridade = Math.max(prioridade, chamado.pergunta ? 5 : 4);
+  }
+
   return {
     assunto: texto(bruto?.assunto, 120),
     resumo: texto(bruto?.resumo, 2000),
     prioridade,
-    aguardando_jean: Boolean(bruto?.aguardando_jean),
+    // Chamado em aberto vence o julgamento da IA. Se marcaram o Jean e ele
+    // nao voltou a falar, a bola esta com ele — nao ha o que interpretar.
+    aguardando_jean: Boolean(bruto?.aguardando_jean) || chamado.houve,
     pendencia: texto(bruto?.pendencia, 1000),
     rascunho: texto(bruto?.rascunho, 3000),
     keywords_criticas: keywordsAchadas,
+    chamado_direto: chamado.houve,
   };
 }
 
 // --- processamento de uma conversa ------------------------------------------
-async function analisar(chat, mensagens, keywordsAchadas, dryRun, comMidia = true) {
+async function analisar(chat, mensagens, keywordsAchadas, chamado, dryRun, comMidia = true) {
   // So baixa depois da triagem: conversa silenciada, pessoal ou ruido nunca
   // chega aqui, entao nunca gera trafego de download.
   let imagens = [];
@@ -276,7 +332,7 @@ async function analisar(chat, mensagens, keywordsAchadas, dryRun, comMidia = tru
     return { ok: false };
   }
 
-  const dados = validar(bruto, keywordsAchadas);
+  const dados = validar(bruto, keywordsAchadas, chamado);
   const ts = mensagens.map((m) => new Date(m.timestamp).getTime());
 
   const linha = {
@@ -291,7 +347,8 @@ async function analisar(chat, mensagens, keywordsAchadas, dryRun, comMidia = tru
   };
 
   console.log(`  P${dados.prioridade}  ${dados.assunto ?? '(sem assunto)'}` +
-              `${dados.aguardando_jean ? '  [AGUARDANDO VOCE]' : ''}`);
+              `${dados.aguardando_jean ? '  [AGUARDANDO VOCE]' : ''}` +
+              `${dados.chamado_direto ? `  [${chamado.quem ?? 'alguem'} chamou voce]` : ''}`);
   if (dados.resumo) console.log(`  ${dados.resumo}`);
   if (dados.rascunho) console.log(`  rascunho: ${dados.rascunho.slice(0, 120)}...`);
 
@@ -364,7 +421,8 @@ async function main() {
   for (const [chatId, mensagens] of porChat) {
     const chat = porId.get(chatId);
     const achadas = acharKeywords(mensagens, keywords);
-    const { acao, motivo } = decidir(chat, achadas);
+    const chamado = chamadoDireto(mensagens);
+    const { acao, motivo } = decidir(chat, achadas, chamado);
     const nome = chat?.nome ?? chatId;
 
     if (acao === 'segurar') {
@@ -382,7 +440,7 @@ async function main() {
     }
 
     console.log(`${nome}  — ${mensagens.length} msg, ${motivo}`);
-    const r = await analisar(chat, mensagens, achadas, dryRun, !semImagens);
+    const r = await analisar(chat, mensagens, achadas, chamado, dryRun, !semImagens);
     if (r.ok) {
       relatorio.ia += 1;
       tokensIn += r.uso?.entrada ?? 0;

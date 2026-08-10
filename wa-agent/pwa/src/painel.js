@@ -34,15 +34,22 @@ function paraData(v) {
 }
 
 /**
- * Keyword critica primeiro, depois estouro de SLA proporcional, depois
- * prioridade. Proporcional e nao absoluto: KA parado 5h (1.25x) vem antes de
- * interno parado 26h (1.08x).
+ * Destaque primeiro, depois estouro de SLA proporcional, depois prioridade.
+ * Proporcional e nao absoluto: KA parado 5h (1.25x) vem antes de interno
+ * parado 26h (1.08x).
+ *
+ * DESTAQUE = keyword critica OU chamado direto (marcaram o Jean / responderam
+ * a ele). Sao os dois casos em que a razao de SLA mente. Pergunta direta feita
+ * agora em grupo interno da 0,01x e afundaria atras de tudo. Ver sql/008.
  */
 export function ordenar(itens) {
+  const destaque = (c) =>
+    ((c.keywords_criticas?.length ?? 0) > 0 || c.chamado_direto === true) ? 1 : 0;
+
   return [...itens].sort((a, b) => {
-    const cA = (a.keywords_criticas?.length ?? 0) > 0 ? 1 : 0;
-    const cB = (b.keywords_criticas?.length ?? 0) > 0 ? 1 : 0;
-    if (cA !== cB) return cB - cA;
+    const dA = destaque(a);
+    const dB = destaque(b);
+    if (dA !== dB) return dB - dA;
 
     const sA = num(a.razao_sla, -1);
     const sB = num(b.razao_sla, -1);
@@ -74,9 +81,12 @@ export function separar(linhas) {
 
     // O SLA so corre enquanto a bola esta com ele.
     const slaEstourado = bolaComEle && num(c.razao_sla, 0) > 1;
+    // `chamado_direto` so vale com a bola com ele: o chamado se resolve
+    // quando o Jean fala. Keyword e prioridade valem sempre.
     const relevante =
       num(c.prioridade, 0) >= 4 ||
       (c.keywords_criticas?.length ?? 0) > 0 ||
+      (c.chamado_direto === true && bolaComEle) ||
       slaEstourado;
 
     if (relevante) monitorar.push(c);
