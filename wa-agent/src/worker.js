@@ -104,6 +104,10 @@ async function carregarKeywords() {
   const r = await consultar('wa_keywords_criticas', (q) => q.eq('ativo', true));
   return r.linhas.map((k) => ({
     termo: k.termo,
+    // `termo` e radical de busca ('rejei', 'devolu'); `rotulo` e o nome que
+    // vai para a tela. Guardamos o rotulo para o painel nao estampar
+    // "rejei" justo no cartao de uma rejeicao fiscal. Ver sql/011.
+    rotulo: k.rotulo || k.termo,
     alvo: k.termo.toLowerCase(),
     categoria: k.categoria,
   }));
@@ -115,7 +119,7 @@ export function acharKeywords(mensagens, keywords) {
     if (!m.conteudo) continue;
     const texto = m.conteudo.toLowerCase();
     for (const k of keywords) {
-      if (texto.includes(k.alvo)) achadas.add(k.termo);
+      if (texto.includes(k.alvo)) achadas.add(k.rotulo || k.termo);
     }
   }
   return [...achadas];

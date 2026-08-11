@@ -330,3 +330,115 @@ footer {
   border-top: 1px solid var(--carta-borda);
 }
 footer p { margin: 0 0 10px; font-size: 13px; color: var(--texto-fraco); }
+
+/* --- abas: Fila | Grupos --- */
+.abas {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 18px;
+  background: var(--carta);
+  border: 1px solid var(--carta-borda);
+  border-radius: 999px;
+}
+.abas button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--texto-fraco);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+}
+.abas button.ativa { color: var(--texto); background: var(--carta-borda); }
+.abas .bolha {
+  min-width: 20px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #241A05;
+  background: var(--ambar);
+  border-radius: 999px;
+}
+
+/* --- cartao de grupo --- */
+.sub { margin: -6px 0 12px; font-size: 13px; color: var(--texto-fraco); }
+
+.grupo {
+  padding: 14px;
+  margin-bottom: var(--gap);
+  background: var(--carta);
+  border: 1px solid var(--carta-borda);
+  border-radius: var(--raio);
+}
+/* Chamado direto e o unico sinal explicito. Merece a borda. */
+.grupo.destaque { border-color: var(--azul); }
+
+.grupo h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.grupo .meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--texto-fraco);
+}
+.grupo .seg {
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-fraco);
+  border: 1px solid var(--carta-borda);
+  border-radius: 999px;
+}
+
+.grupo .texto { margin: 0; font-size: 15px; }
+.grupo .texto.fraco { color: var(--texto-fraco); font-style: italic; }
+
+.grupo .marcas { margin-top: 10px; }
+
+.grupo .buraco {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--texto-fraco);
+}
+
+.tag.chamado    { color: #fff; background: var(--azul); }
+.tag.aguardando { color: #241A05; background: var(--ambar); }
+
+/* --- linha de grupo sem analise --- */
+.linha-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--carta-borda);
+}
+.linha-grupo:last-of-type { border-bottom: none; }
+.linha-grupo strong { font-size: 15px; font-weight: 600; }
+.linha-grupo span { font-size: 13px; color: var(--texto-fraco); }
+
+.nota { margin: 10px 0 0; font-size: 12px; color: var(--texto-fraco); }
+.nota code {
+  padding: 1px 5px;
+  font-size: 11px;
+  background: var(--carta);
+  border: 1px solid var(--carta-borda);
+  border-radius: 5px;
+}

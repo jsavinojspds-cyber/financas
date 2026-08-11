@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { supabase, configurado, buscarPainel, entrar, verificarCodigo, sair } from './supabase.js';
 import { separar, rotulo, decorrido, dataHora, nivelSla } from './painel.js';
+import {
+  separarGrupos, totalMensagens, contagem, janela, etiquetas, naoLido,
+  plural, rotulo as rotuloGrupo,
+} from './grupos.js';
 
 // ---------------------------------------------------------------------------
 // Copiar rascunho
@@ -77,6 +81,113 @@ function Cartao({ c, posicao, mencoes }) {
         </div>
       )}
     </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Aba Grupos — o retrato do dia
+// ---------------------------------------------------------------------------
+function CartaoGrupo({ g }) {
+  const [aberto, setAberto] = useState(false);
+  const tags = etiquetas(g);
+  const buracos = naoLido(g);
+  const hora = janela(g);
+  const texto = g.resumo ?? g.assunto ?? null;
+
+  return (
+    <article className={`grupo${g.chamado_direto ? ' destaque' : ''}`}>
+      <h3>{rotuloGrupo(g)}</h3>
+
+      <p className="meta">
+        {g.segmento && <span className="seg">{g.segmento}</span>}
+        {contagem(g)}
+        {hora && ` · ${hora}`}
+      </p>
+
+      {texto
+        ? <p className="texto">{texto}</p>
+        : <p className="texto fraco">Sem resumo da IA.</p>}
+
+      {tags.length > 0 && (
+        <div className="marcas">
+          {tags.map((t) => (
+            <span key={t.texto} className={`tag ${t.tom}`}>{t.texto}</span>
+          ))}
+        </div>
+      )}
+
+      {buracos.length > 0 && <p className="buraco">{buracos.join(' · ')}</p>}
+
+      {g.rascunho && (
+        <div className="rascunho">
+          <button type="button" className="ver" onClick={() => setAberto((v) => !v)}>
+            {aberto ? 'Ocultar rascunho' : 'Ver rascunho'}
+          </button>
+          {aberto && <pre>{g.rascunho}</pre>}
+          <BotaoCopiar texto={g.rascunho} />
+        </div>
+      )}
+    </article>
+  );
+}
+
+/** Conversa sem análise: uma linha, não um cartão. */
+function LinhaGrupo({ g }) {
+  const hora = janela(g);
+  return (
+    <div className="linha-grupo">
+      <strong>{rotuloGrupo(g)}</strong>
+      <span>{contagem(g)}{hora ? ` · ${hora}` : ''}</span>
+    </div>
+  );
+}
+
+function VisaoGrupos({ grupos }) {
+  const s = separarGrupos(grupos);
+
+  return (
+    <>
+      <section>
+        <h2>
+          Trabalho
+          <span className="conta">{s.trabalho.length}</span>
+        </h2>
+        {s.trabalho.length === 0
+          ? <p className="vazio">Nenhum grupo de trabalho teve movimento.</p>
+          : (
+            <>
+              <p className="sub">{totalMensagens(s.trabalho)} mensagens na janela</p>
+              {s.trabalho.map((g) => <CartaoGrupo key={g.chat_id} g={g} />)}
+            </>
+          )}
+      </section>
+
+      {s.pessoal.length > 0 && (
+        <section>
+          <h2>Pessoal <span className="conta">{s.pessoal.length}</span></h2>
+          {s.pessoal.map((g) => <LinhaGrupo key={g.chat_id} g={g} />)}
+          <p className="nota">Conteúdo não analisado: grupo pessoal não passa pela IA.</p>
+        </section>
+      )}
+
+      {s.indefinido.length > 0 && (
+        <section>
+          <h2>A classificar <span className="conta">{s.indefinido.length}</span></h2>
+          {s.indefinido.map((g) => <LinhaGrupo key={g.chat_id} g={g} />)}
+          <p className="nota">No computador: <code>npm run classificar</code></p>
+        </section>
+      )}
+
+      {s.ruidoTotais.conversas > 0 && (
+        <section>
+          <h2>Ruído</h2>
+          <p className="vazio">
+            {plural(s.ruidoTotais.conversas, 'conversa', 'conversas')},{' '}
+            {plural(s.ruidoTotais.mensagens, 'mensagem', 'mensagens')} — ignorado
+          </p>
+        </section>
+      )}
+    </>
   );
 }
 
@@ -186,6 +297,9 @@ export default function App() {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
   const [carregando, setCarregando] = useState(false);
+  // 'fila'   o que esta parado com ele, em ordem de urgencia
+  // 'grupos' o retrato do dia, grupo por grupo
+  const [aba, setAba] = useState('fila');
 
   useEffect(() => {
     if (!supabase) { setSessao(null); return undefined; }
@@ -249,6 +363,28 @@ export default function App() {
       {!erro && !dados && carregando && <p className="ajuda pad">Carregando...</p>}
 
       {dados && (
+        <nav className="abas">
+          <button
+            type="button"
+            className={aba === 'fila' ? 'ativa' : ''}
+            onClick={() => setAba('fila')}
+          >
+            Fila
+            {aguardando.length > 0 && <span className="bolha">{aguardando.length}</span>}
+          </button>
+          <button
+            type="button"
+            className={aba === 'grupos' ? 'ativa' : ''}
+            onClick={() => setAba('grupos')}
+          >
+            Grupos
+          </button>
+        </nav>
+      )}
+
+      {dados && aba === 'grupos' && <VisaoGrupos grupos={dados.grupos ?? []} />}
+
+      {dados && aba === 'fila' && (
         <>
           <section>
             <h2>Aguardando você <span className="conta">{aguardando.length}</span></h2>

@@ -102,7 +102,9 @@ financas/
     │   ├── 006_pwa.sql            whitelist + fn_wa_painel (Fase 4)
     │   ├── 007_busca.sql          pgvector + tsvector + RRF (Fase 6)
     │   ├── 008_chamado_direto.sql menção/resposta viram prioridade
-    │   └── 009_resumo_dia.sql     atividade por conversa (resumo do dia)
+    │   ├── 009_resumo_dia.sql     atividade por conversa (resumo do dia)
+    │   ├── 010_painel_grupos.sql  fn_wa_painel devolve a aba Grupos
+    │   └── 011_keyword_rotulo.sql nome legível da keyword ('rejei' → 'rejeição fiscal')
     ├── src/
     │   ├── config.js      valida .env, avisa se a chave for anon
     │   ├── tempo.js       UTC no banco → America/Manaus na saída
@@ -124,7 +126,8 @@ financas/
     │   └── status.js      diagnóstico da coleta
     └── pwa/               painel React + Vite (Fase 4)
         ├── src/painel.js  MESMAS regras de ordem do digest.js — mude as duas
-        └── src/App.jsx    fila + copiar rascunho
+        ├── src/grupos.js  MESMAS regras do resumo.js — mude as duas
+        └── src/App.jsx    abas Fila e Grupos + copiar rascunho
 ```
 
 ---
@@ -136,7 +139,7 @@ financas/
 - **`wa_threads_analysis`** — saída da IA (Fase 3)
 - **`wa_sla_policy`** — SLA por segmento, trigger aplica automático em `wa_chats`
 - **`wa_rules`** — padrão de nome → classificação. Consultado **antes** da IA (economiza token e evita erro em contato conhecido)
-- **`wa_keywords_criticas`** — termos que forçam prioridade 5 mesmo em grupo silenciado
+- **`wa_keywords_criticas`** — termos que forçam prioridade 5 mesmo em grupo silenciado. `termo` é radical de busca (`rejei` casa com rejeição/rejeitada); **`rotulo` é o que aparece na tela**. Nunca mostre `termo` ao Jean
 - **`wa_messages.mencionou_me` / `respondeu_me`** — marcaram o Jean com `@`, ou responderam uma mensagem dele. Juntos são o **chamado direto**, o sinal mais forte de que a bola está com ele: é explícito, não inferido. Depende de `MEU_JID` estar no `.env` — sem isso os dois ficam `false` para sempre e o painel volta a ser regido só por SLA
 - **`wa_threads_analysis.chamado_direto`** — houve chamado e o Jean ainda não voltou a falar. Força `aguardando_jean`, levanta a prioridade (5 se tem `?`, senão 4), fura grupo silenciado e sobe a conversa para o topo da ordenação
 - **`vw_wa_inbox`** — visão da caixa de entrada
