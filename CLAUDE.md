@@ -38,7 +38,7 @@ Motivo: automação via Baileys viola os Termos do WhatsApp e o risco de banimen
 | Config | Valor | Por quê |
 |---|---|---|
 | `markOnlineOnConnect` | `false` | Se `true`, o WhatsApp entende que o Jean está online no desktop e **para de enviar push para o iPhone dele**. Quebra o uso normal do celular. |
-| `syncFullHistory` | `false` | Baixar histórico completo gera tráfego anômalo e enche o banco. |
+| `syncFullHistory` | `false` | Baixar histórico completo gera tráfego anômalo e enche o banco. **Continua `false`** — mas o listener agora *aproveita* o bloco de histórico recente que o WhatsApp manda sozinho ao parear (`messaging-history.set`). Antes ele descartava, e junto ia tudo que aconteceu com o listener desligado. |
 | `emitOwnEvents` | `true` | Precisamos ver o que o Jean respondeu — é assim que sabemos se a bola ainda está com ele. |
 | `browser` | `['Mac OS','Safari','10.15.7']` | Fingerprint estável e comum. |
 | Pasta `auth_info_baileys/` | backup obrigatório | Perdeu = reparear via QR presencialmente. |
@@ -110,7 +110,9 @@ financas/
     │   ├── db.js          acesso ao Supabase, nenhuma função lança
     │   ├── claude.js      chamada à API + parse de JSON com retry
     │   ├── midia.js       baixa e descriptografa imagem, sob demanda
-    │   ├── listener.js    read-only, buffer 5s, reconexão exponencial
+    │   ├── listener.js    read-only, buffer 5s, reconexão exponencial.
+    │   │                  Ingere 3 origens: ao vivo (`notify`), atraso
+    │   │                  (`append`) e histórico (`messaging-history.set`)
     │   ├── worker.js      triagem/resumo/sugestão (Fase 3)
     │   ├── digest.js      painel priorizado (Fase 5)
     │   ├── resumo.js      retrato do dia, grupo por grupo

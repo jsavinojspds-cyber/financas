@@ -277,49 +277,86 @@ async function conectar() {
   });
 
   sock.ev.on('messages.upsert', async (evento) => {
+    // 'notify' e mensagem viva. 'append' e o que o WhatsApp entrega de
+    // atraso quando o dispositivo reconecta — mensagem real, que chegou
+    // enquanto estavamos fora. Descartar isso era perder justamente o que
+    // aconteceu com o listener desligado.
+    await ingerir(sock, evento.messages, evento.type === 'notify' ? 'ao vivo' : 'atraso');
+  });
+
+  // O WhatsApp entrega um bloco de historico recente ao parear e, as vezes,
+  // ao reconectar. Nao pedimos nada a mais por isso — `syncFullHistory`
+  // continua `false` (CLAUDE.md secao 3), entao nao ha trafego extra nem
+  // download de meses. So paramos de jogar fora o que ele ja mandava.
+  sock.ev.on('messaging-history.set', async ({ chats, messages, syncType, progress }) => {
     try {
-      // 'append' e sincronizacao de historico. So 'notify' e mensagem viva.
-      if (evento.type !== 'notify') return;
-
-      for (const msg of evento.messages ?? []) {
-        const linha = normalizar(msg, meuJid);
-        if (!linha) continue;
-
-        const isGroup = linha.chat_id.endsWith('@g.us');
-        let nome = null;
-
-        if (isGroup) {
-          nome = await nomeDoGrupo(sock, linha.chat_id);
-        } else if (!linha.from_me) {
-          nome = msg.pushName ?? null;
-        }
-
-        chatsVistos.set(linha.chat_id, { nome, is_group: isGroup });
-        buffer.push(linha);
-
-        log.debug(
-          { chat: nome ?? linha.chat_id, tipo: linha.tipo, hora: hora(linha.timestamp) },
-          'mensagem recebida',
-        );
+      for (const c of chats ?? []) {
+        if (c?.id && c.name) nomesGrupo.set(c.id, c.name);
       }
 
-      // Buffer cheio grava na hora; senao espera a janela de 5s.
-      if (buffer.length >= config.bufferMax) {
-        if (timerBuffer) {
-          clearTimeout(timerBuffer);
-          timerBuffer = null;
-        }
-        await flush();
-      } else {
-        agendarFlush();
+      const total = messages?.length ?? 0;
+      if (total > 0) {
+        log.info({ mensagens: total, syncType, progress }, 'historico recebido');
       }
+
+      await ingerir(sock, messages, 'historico');
     } catch (err) {
-      // Uma mensagem malformada nao derruba o listener (CLAUDE.md regra 5).
-      log.error({ err: err?.message }, 'messages.upsert falhou, seguindo');
+      log.error({ err: err?.message }, 'messaging-history.set falhou, seguindo');
     }
   });
 
   return sock;
+}
+
+/**
+ * Caminho unico de entrada: normaliza, resolve nome e enfileira.
+ *
+ * Vale para mensagem ao vivo, atrasada e de historico — o tratamento e o
+ * mesmo, e `salvarMensagens` ignora duplicata por (chat_id, msg_id), entao
+ * receber a mesma mensagem por dois caminhos nao cria linha repetida.
+ */
+async function ingerir(sock, mensagens, origem) {
+  try {
+    let novas = 0;
+
+    for (const msg of mensagens ?? []) {
+      const linha = normalizar(msg, meuJid);
+      if (!linha) continue;
+
+      const isGroup = linha.chat_id.endsWith('@g.us');
+      let nome = null;
+
+      if (isGroup) {
+        nome = await nomeDoGrupo(sock, linha.chat_id);
+      } else if (!linha.from_me) {
+        nome = msg.pushName ?? null;
+      }
+
+      chatsVistos.set(linha.chat_id, { nome, is_group: isGroup });
+      buffer.push(linha);
+      novas++;
+
+      log.debug(
+        { chat: nome ?? linha.chat_id, tipo: linha.tipo, hora: hora(linha.timestamp), origem },
+        'mensagem recebida',
+      );
+
+      // Historico vem em bloco grande. Grava em fatias para nao estourar
+      // memoria nem mandar um insert gigante de uma vez.
+      if (buffer.length >= config.bufferMax) {
+        if (timerBuffer) { clearTimeout(timerBuffer); timerBuffer = null; }
+        await flush();
+      }
+    }
+
+    if (novas > 0) {
+      if (buffer.length > 0) agendarFlush();
+      if (origem !== 'ao vivo') log.info({ novas, origem }, 'mensagens enfileiradas');
+    }
+  } catch (err) {
+    // Uma mensagem malformada nao derruba o listener (CLAUDE.md regra 5).
+    log.error({ err: err?.message, origem }, 'ingestao falhou, seguindo');
+  }
 }
 
 // --- encerramento limpo -----------------------------------------------------
