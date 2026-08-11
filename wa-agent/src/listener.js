@@ -294,10 +294,13 @@ async function conectar() {
         if (c?.id && c.name) nomesGrupo.set(c.id, c.name);
       }
 
-      const total = messages?.length ?? 0;
-      if (total > 0) {
-        log.info({ mensagens: total, syncType, progress }, 'historico recebido');
-      }
+      // Loga SEMPRE, inclusive com zero mensagem. "Evento veio vazio" e
+      // "evento nunca veio" tem causas diferentes e exigem acoes diferentes;
+      // silenciar o caso vazio esconde exatamente essa distincao.
+      log.info(
+        { mensagens: messages?.length ?? 0, conversas: chats?.length ?? 0, syncType, progress },
+        'historico recebido',
+      );
 
       await ingerir(sock, messages, 'historico');
     } catch (err) {
