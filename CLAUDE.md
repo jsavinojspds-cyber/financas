@@ -231,6 +231,21 @@ Sem o destaque, uma pergunta direta feita agora num grupo interno sai com razão
 
 ## 9. Regras para você, Claude Code
 
+### 9.0 Antes de escrever qualquer código
+
+Estas duas vêm primeiro porque o projeto já errou nelas. Uma semana de trabalho e o Jean ainda não tinha um digest funcionando — não por falta de código, mas por sequência e silêncio sobre pré-requisitos.
+
+**A. Diga o custo na primeira resposta, não na décima.**
+Se a tarefa não termina nesta sessão, fale antes de começar: o que falta, quanto tempo, quanto custa, e **o que depende do Jean** (chave paga, cartão, VPS, acesso, presença física para parear). Pré-requisito que só aparece no fim é tempo roubado dele. Ele tem trabalho: se a coisa não vai ficar pronta hoje, ele precisa saber hoje para decidir se vale.
+
+**B. Núcleo antes de largura.**
+Não comece fase nova enquanto a anterior não rodou de ponta a ponta com dado real. O projeto ganhou PWA (Fase 4) e busca semântica (Fase 6) antes de o worker (Fase 3) ter rodado **uma única vez** — então o painel bonito no iPhone mostrava um contador vazio, porque o cérebro nunca tinha sido ligado. Largura sem núcleo não é progresso, é dívida com aparência de entrega.
+
+**C. Um comando por vez, e diga o que esperar.**
+O Jean opera pelo Prompt de Comando do Windows, sem admin. Comando encadeado e passo múltiplo já custaram sessões inteiras. Mande um, diga o que deve aparecer, espere o retorno.
+
+### 9.1 Regras de código
+
 1. **Não implemente envio de mensagem.** Ver seção 2.
 2. **Não altere as flags da seção 3** sem explicar a consequência ao Jean.
 3. **Não misture este banco com a base corporativa da Duty.** Aqui há conversa de terceiros; é um projeto Supabase separado por decisão de LGPD.
