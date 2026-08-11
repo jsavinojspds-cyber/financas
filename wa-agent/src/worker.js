@@ -93,6 +93,8 @@ function args() {
     chat: valor('--chat', null),
     dryRun: a.includes('--dry-run'),
     semImagens: a.includes('--sem-imagens'),
+    // Manda grupo pessoal para a IA. Fora do padrao de proposito: ver decidir().
+    pessoal: a.includes('--pessoal'),
   };
 }
 
@@ -156,7 +158,7 @@ export function chamadoDireto(mensagens = []) {
 /**
  * @returns {{acao: 'ia'|'descartar'|'segurar', motivo: string}}
  */
-export function decidir(chat, keywordsAchadas, chamado = { houve: false }) {
+export function decidir(chat, keywordsAchadas, chamado = { houve: false }, opcoes = {}) {
   if (!chat) return { acao: 'segurar', motivo: 'conversa desconhecida' };
 
   if (chat.classificado_por === 'nenhum' || chat.bucket === 'indefinido') {
@@ -164,8 +166,12 @@ export function decidir(chat, keywordsAchadas, chamado = { houve: false }) {
     return { acao: 'segurar', motivo: 'sem classificacao' };
   }
 
+  // Grupo pessoal fica FORA da IA por padrao, e isso e decisao de projeto,
+  // nao economia: e conversa de familia e amigo, de terceiros que nunca
+  // consentiram com nada. So entra quando o Jean pede na mao, com --pessoal.
   if (chat.bucket === 'pessoal') {
-    return { acao: 'descartar', motivo: 'pessoal' };
+    if (!opcoes.pessoal) return { acao: 'descartar', motivo: 'pessoal' };
+    return { acao: 'ia', motivo: 'pessoal (--pessoal)' };
   }
 
   const silenciado = chat.muted || chat.bucket === 'ruido';
@@ -373,11 +379,12 @@ async function analisar(chat, mensagens, keywordsAchadas, chamado, dryRun, comMi
 // --- main -------------------------------------------------------------------
 async function main() {
   exigir(['supabaseUrl', 'supabaseKey', 'anthropicKey']);
-  const { limite, chat: soEsteChat, dryRun, semImagens } = args();
+  const { limite, chat: soEsteChat, dryRun, semImagens, pessoal } = args();
 
   console.log(`\nWA-AGENT — triagem em ${agora()} (Manaus)`);
   console.log(`Modelo: ${config.anthropicModel}${dryRun ? '   [DRY-RUN]' : ''}` +
-              `${semImagens ? '   [SEM IMAGENS]' : ''}\n`);
+              `${semImagens ? '   [SEM IMAGENS]' : ''}` +
+              `${pessoal ? '   [INCLUINDO GRUPO PESSOAL]' : ''}\n`);
 
   // 1. fila
   const fila = await consultar('wa_messages', (q) => {
@@ -422,7 +429,7 @@ async function main() {
     const chat = porId.get(chatId);
     const achadas = acharKeywords(mensagens, keywords);
     const chamado = chamadoDireto(mensagens);
-    const { acao, motivo } = decidir(chat, achadas, chamado);
+    const { acao, motivo } = decidir(chat, achadas, chamado, { pessoal });
     const nome = chat?.nome ?? chatId;
 
     if (acao === 'segurar') {

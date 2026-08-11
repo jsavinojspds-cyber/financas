@@ -12,6 +12,7 @@
     "testar": "node src/testar.js",
     "worker": "node src/worker.js",
     "digest": "node src/digest.js",
+    "resumo": "node src/resumo.js",
     "buscar": "node src/buscar.js",
     "indexar": "node src/indexar.js",
     "classificar": "node src/classificar.js",

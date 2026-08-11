@@ -101,7 +101,8 @@ financas/
     │   ├── 005_seguranca.sql      revoga anon/authenticated
     │   ├── 006_pwa.sql            whitelist + fn_wa_painel (Fase 4)
     │   ├── 007_busca.sql          pgvector + tsvector + RRF (Fase 6)
-    │   └── 008_chamado_direto.sql menção/resposta viram prioridade
+    │   ├── 008_chamado_direto.sql menção/resposta viram prioridade
+    │   └── 009_resumo_dia.sql     atividade por conversa (resumo do dia)
     ├── src/
     │   ├── config.js      valida .env, avisa se a chave for anon
     │   ├── tempo.js       UTC no banco → America/Manaus na saída
@@ -112,6 +113,7 @@ financas/
     │   ├── listener.js    read-only, buffer 5s, reconexão exponencial
     │   ├── worker.js      triagem/resumo/sugestão (Fase 3)
     │   ├── digest.js      painel priorizado (Fase 5)
+    │   ├── resumo.js      retrato do dia, grupo por grupo
     │   ├── embeddings.js  vetores para a busca (fornecedor externo)
     │   ├── indexar.js     gera embeddings do histórico
     │   ├── buscar.js      busca no histórico (Fase 6)
@@ -272,7 +274,9 @@ npm run status                    # diagnóstico da coleta
 npm run classificar               # classificação assistida
 npm run worker                    # triagem: resumo + rascunho
 npm run worker -- --dry-run       # mostra o que faria, sem gravar
+npm run worker -- --pessoal       # inclui grupo pessoal na IA (fora do padrão)
 npm run digest                    # o painel, no formato da seção 8
+npm run resumo                    # retrato do dia, grupo por grupo
 npm run digest -- --bom-dia       # painel + rascunho de bom dia para o time
 npm run buscar -- "verba julho"   # busca no histórico
 npm run indexar                   # gera embeddings (opcional, precisa de chave)
