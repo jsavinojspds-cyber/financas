@@ -73,6 +73,50 @@ export async function obterCliente(c: ConfigSync): Promise<SupabaseClient> {
   return cliente
 }
 
+export type ResultadoTeste = { ok: true } | { ok: false; msg: string }
+
+/**
+ * Confere URL e chave sem precisar de login.
+ *
+ * O truque: uma consulta sem sessão TEM que ser barrada. Se voltar
+ * "permissão negada", chegamos ao banco e ele respondeu — ou seja, endereço
+ * e chave estão certos e a tabela está protegida. Erro de rede, ao
+ * contrário, significa que o endereço não existe.
+ *
+ * Sem isso, um endereço errado só apareceria lá na frente, como uma falha
+ * confusa no meio do login.
+ */
+export async function testarConexao(c: ConfigSync): Promise<ResultadoTeste> {
+  try {
+    const sb = await obterCliente(c)
+    const { error } = await sb.from(TABELA).select('user_id').limit(1)
+
+    if (!error) return { ok: true }
+
+    const msg = error.message ?? ''
+    const cod = error.code ?? ''
+
+    if (cod === '42501' || /permission denied|JWT|not authorized/i.test(msg)) {
+      return { ok: true }
+    }
+    if (cod === '42P01' || cod === 'PGRST205' || /does not exist|schema cache/i.test(msg)) {
+      return {
+        ok: false,
+        msg: `Conectou, mas não achei a tabela ${TABELA}. Falta rodar o supabase/schema.sql no projeto.`,
+      }
+    }
+    if (/invalid api key|api key/i.test(msg)) {
+      return { ok: false, msg: 'Chave recusada pelo projeto. Confira se copiou inteira.' }
+    }
+    return { ok: false, msg }
+  } catch {
+    return {
+      ok: false,
+      msg: 'Não consegui falar com esse endereço. Confira a URL (ela termina em .supabase.co).',
+    }
+  }
+}
+
 export async function emailLogado(c: ConfigSync): Promise<string | null> {
   try {
     const sb = await obterCliente(c)

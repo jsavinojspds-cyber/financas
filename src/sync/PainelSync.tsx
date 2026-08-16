@@ -10,6 +10,7 @@ import {
   lerConfigSync,
   sair,
   sincronizar,
+  testarConexao,
   type ConfigSync,
 } from './supabase'
 
@@ -25,6 +26,7 @@ export function PainelSync({ aoAvisar }: { aoAvisar: (m: string) => void }) {
   const [codigo, setCodigo] = useState('')
   const [conta, setConta] = useState('')
   const [ocupado, setOcupado] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
     void (async () => {
@@ -48,19 +50,38 @@ export function PainelSync({ aoAvisar }: { aoAvisar: (m: string) => void }) {
 
   async function salvarConfig() {
     const limpaUrl = url.trim().replace(/\/+$/, '')
-    if (!/^https:\/\/.+\.supabase\.co$/.test(limpaUrl) || chave.trim().length < 20) {
-      aoAvisar('Confira a URL e a chave anon do projeto')
+    if (!/^https:\/\/.+\.supabase\.co$/.test(limpaUrl)) {
+      setErro('A URL precisa ser o endereço do projeto, terminando em .supabase.co')
       return
     }
+    if (chave.trim().length < 20) {
+      setErro('A chave parece incompleta. Copie o valor inteiro.')
+      return
+    }
+
     const c: ConfigSync = {
       url: limpaUrl,
       anonKey: chave.trim(),
       dispositivo: config?.dispositivo ?? novoId().slice(0, 8),
       ultimoSync: null,
     }
+
+    // Testa antes de gravar: melhor falhar aqui, com a causa na tela, do que
+    // no meio do login sem o usuário saber o que deu errado.
+    setOcupado(true)
+    setErro(null)
+    const teste = await testarConexao(c)
+    setOcupado(false)
+
+    if (!teste.ok) {
+      setErro(teste.msg)
+      return
+    }
+
     await gravarConfigSync(c)
     setConfig(c)
     setPasso('login')
+    aoAvisar('Conexão confirmada')
   }
 
   async function enviar() {
@@ -176,13 +197,18 @@ export function PainelSync({ aoAvisar }: { aoAvisar: (m: string) => void }) {
             />
           </div>
           <p className="text-[11px] leading-relaxed text-tinta-3">
-            Encontre os dois em Supabase → Project Settings → API. A chave anon é pública por
-            natureza; quem protege os dados é a política RLS aplicada pelo{' '}
-            <code className="font-mono">schema.sql</code> do repositório. Rode o schema antes de
-            conectar.
+            Encontre os dois em Supabase → Project Settings → API. A chave é pública por natureza;
+            quem protege os dados é a política RLS do banco.{' '}
+            <strong>A URL não abre no navegador</strong> — é endereço de API, e aberta direto ela
+            responde &ldquo;requested path is invalid&rdquo;. É só colar aqui.
           </p>
-          <Botao variante="primario" onClick={() => void salvarConfig()}>
-            Salvar configuração
+          {erro ? (
+            <p className="rounded-xl bg-despesa/10 p-3 text-[12px] font-semibold leading-relaxed text-despesa">
+              {erro}
+            </p>
+          ) : null}
+          <Botao variante="primario" disabled={ocupado} onClick={() => void salvarConfig()}>
+            {ocupado ? 'Testando conexão…' : 'Conectar'}
           </Botao>
         </>
       ) : null}
