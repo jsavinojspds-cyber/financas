@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="brilho" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" rx="114" fill="url(#bg)"/>
+  <rect x="0" y="0" width="512" height="250" rx="114" fill="url(#brilho)"/>
+
+  <circle cx="256" cy="233" r="131" fill="#fbbf24" opacity="0.15"/>
+  <circle cx="256" cy="233" r="108" fill="#f59e0b" opacity="0.20"/>
+
+  <text x="256" y="210" font-family="Arial Black, Arial, sans-serif" font-size="86"
+        font-weight="900" text-anchor="middle" fill="#fde68a" letter-spacing="-3">R$</text>
+
+  <rect x="148" y="240" width="216" height="9" rx="4.5" fill="#fde68a" opacity="0.6"/>
+
+  <text x="256" y="312" font-family="Arial, Helvetica, sans-serif" font-size="52"
+        font-weight="700" text-anchor="middle" fill="#ffffff" opacity="0.92">Finanças</text>
+
+  <circle cx="120" cy="120" r="12" fill="#ffffff" opacity="0.20"/>
+  <circle cx="392" cy="120" r="9" fill="#ffffff" opacity="0.15"/>
+  <circle cx="412" cy="370" r="15" fill="#fbbf24" opacity="0.20"/>
+</svg>

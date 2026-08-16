@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Fontes self-hosted (offline-first) ───────────────────────────── */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/financas/fonts/dm-sans-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/financas/fonts/dm-sans-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/financas/fonts/dm-sans-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/financas/fonts/dm-mono-500.woff2') format('woff2');
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body {
+    background: theme('colors.fundo');
+  }
+
+  body {
+    @apply bg-fundo font-sans text-tinta;
+    /* impede o bounce do Safari que descola o header no PWA */
+    overscroll-behavior: none;
+  }
+
+  #app {
+    @apply min-h-[100dvh] bg-fundo;
+  }
+
+  /* o scrollbar do WebKit não some com utilitário do Tailwind v3 */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+  }
+
+  /* iOS dá zoom automático em campo com fonte < 16px ao focar.
+     16px em todos os campos evita esse salto de layout. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* remove o visual nativo do iOS mantendo o inset neumórfico */
+  input[type='text'],
+  input[type='number'],
+  input[type='date'],
+  input[type='search'],
+  input[type='tel'],
+  input[type='password'],
+  select,
+  textarea {
+    @apply appearance-none rounded-xl border-none bg-fundo text-tinta shadow-neu-in;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-tinta-3;
+  }
+
+  /* o ícone do date picker do iOS fica invisível no fundo lilás */
+  input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(28%) sepia(45%) saturate(1200%) hue-rotate(230deg);
+  }
+}
+
+@layer components {
+  /* respeita o notch e a home bar do iPhone */
+  .pad-topo {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pad-base {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

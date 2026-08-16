@@ -1,0 +1,43 @@
+{
+  "name": "Finanças Pessoais",
+  "short_name": "Finanças",
+  "description": "Controle de receitas, despesas e fluxo de caixa, offline-first.",
+  "id": "/financas/",
+  "start_url": "/financas/",
+  "scope": "/financas/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e8e0f0",
+  "theme_color": "#e8e0f0",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    {
+      "src": "/financas/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/financas/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/financas/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Novo lançamento",
+      "short_name": "Novo",
+      "url": "/financas/?acao=novo",
+      "icons": [{ "src": "/financas/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
