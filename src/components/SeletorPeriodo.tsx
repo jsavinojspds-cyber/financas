@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Folha, cx } from './ui'
-import { MESES_CURTOS, labelMes } from '@/lib/formato'
+import { MESES_CURTOS } from '@/lib/formato'
 import type { Conta } from '@/types'
 
 /**
@@ -126,37 +126,5 @@ export function SeletorPeriodo({
         ) : null}
       </div>
     </Folha>
-  )
-}
-
-/** Botão do cabeçalho que abre a folha acima. */
-export function BotaoPeriodo({
-  ano,
-  mes,
-  conta,
-  aoAbrir,
-}: {
-  ano: number
-  mes: number
-  conta: Conta | null
-  aoAbrir: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={aoAbrir}
-      className="flex min-w-0 items-center gap-1.5 rounded-xl px-2 py-1.5 active:bg-superficie"
-    >
-      <span className="truncate text-[15px] font-bold text-tinta">{labelMes(ano, mes)}</span>
-      {conta ? (
-        <span
-          className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-          style={{ background: `${conta.cor}1f`, color: conta.cor }}
-        >
-          {conta.icone}
-        </span>
-      ) : null}
-      <span className="shrink-0 text-[9px] text-tinta-3">▼</span>
-    </button>
   )
 }

@@ -5,10 +5,11 @@ import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
 import { PainelManha } from '@/features/agente/PainelManha'
 import { Carteira } from '@/features/carteira/Carteira'
 import { Chat } from '@/features/chat/Chat'
-import { Confirmar, Toast, cx, type DadosToast } from '@/components/ui'
+import { Confirmar, Toast, type DadosToast } from '@/components/ui'
 import { AvisoAtualizacao } from '@/components/BotaoAtualizar'
+import { IndicadorGravacao } from '@/components/IndicadorGravacao'
 import { BarraInferior } from '@/components/BarraInferior'
-import { BotaoPeriodo, SeletorPeriodo } from '@/components/SeletorPeriodo'
+import { SeletorPeriodo } from '@/components/SeletorPeriodo'
 import { Resumo } from '@/features/resumo/Resumo'
 import { ListaLancamentos } from '@/features/lancamentos/ListaLancamentos'
 import { FluxoCaixa } from '@/features/fluxo/FluxoCaixa'
@@ -230,63 +231,24 @@ function Shell({ aoSair }: { aoSair: () => void }) {
 
   return (
     <div className="min-h-[100dvh]">
-      {/* Cabeçalho de duas linhas. As ações moraram aqui em cima até
-          perceber-se que, num iPhone grande, o topo é a área que o polegar
-          não alcança — foram para a barra de baixo. */}
-      <header className="pad-topo sticky top-0 z-30 bg-fundo/95 px-4 pb-1 pt-2 backdrop-blur">
-        <div className="mx-auto max-w-xl">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => irMes(-1)}
-              aria-label="Mês anterior"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px] text-tinta-2 active:bg-superficie"
-            >
-              ‹
-            </button>
-
-            <BotaoPeriodo
-              ano={ano}
-              mes={mes}
-              conta={contaDoChip}
-              aoAbrir={() => setPeriodoAberto(true)}
-            />
-
-            <button
-              type="button"
-              onClick={() => irMes(1)}
-              aria-label="Próximo mês"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px] text-tinta-2 active:bg-superficie"
-            >
-              ›
-            </button>
-
-            <div className="flex-1" />
-          </div>
-
-          {/* abas */}
-          <div className="flex items-center gap-0.5 overflow-x-auto">
-            {ABAS.map((a) => (
-              <button
-                key={a.k}
-                type="button"
-                onClick={() => setAba(a.k)}
-                className={cx(
-                  'shrink-0 whitespace-nowrap border-b-2 px-2.5 py-2 text-[12px] font-bold transition-colors',
-                  aba === a.k ? 'border-accent text-accent' : 'border-transparent text-tinta-2',
-                )}
-              >
-                {a.l}
-              </button>
-            ))}
-          </div>
-
-          <AvisoAtualizacao />
+      {/* Sem barra no topo: num iPhone grande aquela faixa não é alcançável
+          pelo polegar, então nada que se toca com frequência fica lá. Só o
+          respiro do notch e um rótulo de contexto, para leitura. */}
+      <div className="pad-topo" />
+      <div className="mx-auto max-w-xl px-4 pt-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-tinta-3">
+            {labelMes(ano, mes)}
+            {contaDoChip ? ` · ${contaDoChip.nome}` : ''}
+          </p>
+          {/* o estado de gravação é para ler, não para tocar — cabe no topo */}
+          <IndicadorGravacao estado={gravacao} aoTentarNovamente={() => void salvarAgora()} />
         </div>
-      </header>
+        <AvisoAtualizacao />
+      </div>
 
-      {/* pb-28: espaço para a barra de ações fixa não cobrir o conteúdo */}
-      <main className="mx-auto max-w-xl px-4 pb-28 pt-3">
+      {/* pb-36: espaço para a barra de navegação fixa não cobrir o conteúdo */}
+      <main className="mx-auto max-w-xl px-4 pb-36 pt-2">
         {aba === 'hoje' ? <PainelManha key={recarga} /> : null}
 
         {aba === 'chat' ? <Chat mesChave={k} aoAvisar={mostrarToast} /> : null}
@@ -368,10 +330,17 @@ function Shell({ aoSair }: { aoSair: () => void }) {
       </main>
 
       <BarraInferior
+        abas={ABAS}
+        aba={aba}
+        aoTrocarAba={setAba}
+        ano={ano}
+        mes={mes}
+        conta={contaDoChip}
+        aoMesAnterior={() => irMes(-1)}
+        aoProximoMes={() => irMes(1)}
+        aoAbrirPeriodo={() => setPeriodoAberto(true)}
         mostrarNovo={!SEM_NOVO.includes(aba)}
         aoNovo={abrirNovo}
-        gravacao={gravacao}
-        aoSalvarAgora={() => void salvarAgora()}
         aoAvisar={mostrarToast}
         aoAtualizarDados={() => setRecarga((n) => n + 1)}
         aoAjustes={() => setAjustesAberto(true)}

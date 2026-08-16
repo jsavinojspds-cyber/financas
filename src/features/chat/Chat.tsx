@@ -182,8 +182,9 @@ export function Chat({
         </div>
       ) : null}
 
+      {/* bottom-32: fica acima da barra de navegação fixa, sem cobri-la */}
       <form
-        className="sticky bottom-4 flex gap-2"
+        className="sticky bottom-32 flex gap-2"
         onSubmit={(e) => {
           e.preventDefault()
           responder(entrada)
