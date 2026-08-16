@@ -56,7 +56,8 @@ export function BotaoAtualizar({
       onClick={() => void clicar()}
       aria-label={disponivel ? 'Instalar atualização disponível' : 'Procurar atualização'}
       className={cx(
-        'relative flex h-8 w-8 items-center justify-center rounded-full text-[13px] shadow-neu-xs transition-colors',
+        // 44px: alvo mínimo de toque recomendado no iOS
+        'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[15px] shadow-neu-xs transition-colors active:shadow-neu-in-sm',
         disponivel ? 'bg-accent text-superficie' : 'bg-superficie',
       )}
     >

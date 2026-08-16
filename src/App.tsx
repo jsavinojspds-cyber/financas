@@ -5,10 +5,10 @@ import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
 import { PainelManha } from '@/features/agente/PainelManha'
 import { Carteira } from '@/features/carteira/Carteira'
 import { Chat } from '@/features/chat/Chat'
-import { Botao, Confirmar, Toast, cx, type DadosToast } from '@/components/ui'
-import { IndicadorGravacao } from '@/components/IndicadorGravacao'
-import { AvisoAtualizacao, BotaoAtualizar } from '@/components/BotaoAtualizar'
-import { SeletorConta } from '@/features/contas/SeletorConta'
+import { Confirmar, Toast, cx, type DadosToast } from '@/components/ui'
+import { AvisoAtualizacao } from '@/components/BotaoAtualizar'
+import { BarraInferior } from '@/components/BarraInferior'
+import { BotaoPeriodo, SeletorPeriodo } from '@/components/SeletorPeriodo'
 import { Resumo } from '@/features/resumo/Resumo'
 import { ListaLancamentos } from '@/features/lancamentos/ListaLancamentos'
 import { FluxoCaixa } from '@/features/fluxo/FluxoCaixa'
@@ -23,7 +23,7 @@ import {
   rascunhoNovo,
   type RascunhoLancamento,
 } from '@/features/lancamentos/FormLancamento'
-import { antMes, chave, hoje, labelMes, MESES_CURTOS, proxMes } from '@/lib/formato'
+import { antMes, chave, hoje, labelMes, proxMes } from '@/lib/formato'
 import { doMes } from '@/state/seletores'
 import { usarNotificacoes } from '@/features/notificacoes/usarNotificacoes'
 import type { EstadoApp, Lancamento, Recorrencia } from '@/types'
@@ -123,6 +123,7 @@ function Shell({ aoSair }: { aoSair: () => void }) {
     rascunhoNovo(chave(agora.getFullYear(), agora.getMonth()), 'pf', 'Outros'),
   )
   const [confirmarExclusao, setConfirmarExclusao] = useState<Lancamento | null>(null)
+  const [periodoAberto, setPeriodoAberto] = useState(false)
   // Incrementado pelo botão 🔄: remonta o painel e refaz a busca das cotações.
   const [recarga, setRecarga] = useState(0)
 
@@ -214,130 +215,78 @@ function Shell({ aoSair }: { aoSair: () => void }) {
     setFiltro('todos')
   }
 
-  // Meses do ano corrente que têm algum lançamento (bolinha no mini-calendário).
+  // Meses com lançamentos, para marcar com ponto no seletor de período.
   const mesesComDados = useMemo(() => {
-    const s = new Set<number>()
-    for (let m = 0; m < 12; m++) {
-      if (doMes(estado, chave(ano, m)).length) s.add(m)
+    const s = new Set<string>()
+    for (const [mesK, itens] of Object.entries(estado.lancamentos)) {
+      const visiveis =
+        contaAtiva === 'todas' ? itens : itens.filter((l) => l.conta === contaAtiva)
+      if (visiveis.length) s.add(mesK)
     }
     return s
-  }, [estado, ano])
+  }, [estado.lancamentos, contaAtiva])
+
+  const contaDoChip = contaAtiva === 'todas' ? null : (estado.contas.find((c) => c.id === contaAtiva) ?? null)
 
   return (
     <div className="min-h-[100dvh]">
-      <header className="pad-topo sticky top-0 z-30 bg-fundo/95 px-4 pb-2 pt-3 backdrop-blur">
+      {/* Cabeçalho de duas linhas. As ações moraram aqui em cima até
+          perceber-se que, num iPhone grande, o topo é a área que o polegar
+          não alcança — foram para a barra de baixo. */}
+      <header className="pad-topo sticky top-0 z-30 bg-fundo/95 px-4 pb-1 pt-2 backdrop-blur">
         <div className="mx-auto max-w-xl">
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="text-[17px] font-bold text-tinta">💰 Finanças</h1>
-            <div className="flex items-center gap-2.5">
-              <IndicadorGravacao estado={gravacao} aoTentarNovamente={() => void salvarAgora()} />
-              <BotaoAtualizar
-                aoAvisar={mostrarToast}
-                aoAtualizarDados={() => setRecarga((n) => n + 1)}
-              />
-              <button
-                type="button"
-                onClick={() => setAjustesAberto(true)}
-                aria-label="Ajustes"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-superficie text-[13px] shadow-neu-xs"
-              >
-                ⚙️
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void salvarAgora()
-                  aoSair()
-                }}
-                aria-label="Bloquear app"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-superficie text-[13px] shadow-neu-xs"
-              >
-                🔒
-              </button>
-            </div>
-          </div>
-
-          <SeletorConta
-            contas={estado.contas}
-            ativa={contaAtiva}
-            aoTrocar={(id) => dispatch({ t: 'config', patch: { contaAtiva: id } })}
-          />
-
-          {/* navegação de mês */}
-          <div className="mt-2 flex items-center justify-between">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => irMes(-1)}
               aria-label="Mês anterior"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-superficie text-tinta-2 shadow-neu-xs"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px] text-tinta-2 active:bg-superficie"
             >
               ‹
             </button>
-            <span className="text-[14px] font-bold text-tinta">{labelMes(ano, mes)}</span>
+
+            <BotaoPeriodo
+              ano={ano}
+              mes={mes}
+              conta={contaDoChip}
+              aoAbrir={() => setPeriodoAberto(true)}
+            />
+
             <button
               type="button"
               onClick={() => irMes(1)}
               aria-label="Próximo mês"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-superficie text-tinta-2 shadow-neu-xs"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px] text-tinta-2 active:bg-superficie"
             >
               ›
             </button>
-          </div>
 
-          {/* mini-calendário do ano */}
-          <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
-            {MESES_CURTOS.map((rotulo, i) => (
-              <button
-                key={rotulo}
-                type="button"
-                onClick={() => setMes(i)}
-                className={cx(
-                  'relative shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors',
-                  i === mes ? 'bg-accent text-superficie shadow-neu-xs' : 'text-tinta-2',
-                )}
-              >
-                {rotulo}
-                {mesesComDados.has(i) && i !== mes ? (
-                  <span className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-info" />
-                ) : null}
-              </button>
-            ))}
+            <div className="flex-1" />
           </div>
 
           {/* abas */}
-          <div className="mt-1.5 flex items-center gap-0.5 overflow-x-auto">
+          <div className="flex items-center gap-0.5 overflow-x-auto">
             {ABAS.map((a) => (
               <button
                 key={a.k}
                 type="button"
                 onClick={() => setAba(a.k)}
                 className={cx(
-                  'shrink-0 whitespace-nowrap rounded-t-md border-b-2 px-2.5 py-2 text-[12px] font-bold transition-colors',
-                  aba === a.k
-                    ? 'border-accent text-accent'
-                    : 'border-transparent text-tinta-2',
+                  'shrink-0 whitespace-nowrap border-b-2 px-2.5 py-2 text-[12px] font-bold transition-colors',
+                  aba === a.k ? 'border-accent text-accent' : 'border-transparent text-tinta-2',
                 )}
               >
                 {a.l}
               </button>
             ))}
-            <div className="flex-1" />
-            {!SEM_NOVO.includes(aba) ? (
-              <Botao
-                variante="primario"
-                onClick={abrirNovo}
-                className="shrink-0 !rounded-b-none !px-3 !py-1.5 !text-[12px]"
-              >
-                + Novo
-              </Botao>
-            ) : null}
           </div>
 
           <AvisoAtualizacao />
         </div>
       </header>
 
-      <main className="mx-auto max-w-xl px-4 pb-24 pt-3">
+      {/* pb-28: espaço para a barra de ações fixa não cobrir o conteúdo */}
+      <main className="mx-auto max-w-xl px-4 pb-28 pt-3">
         {aba === 'hoje' ? <PainelManha key={recarga} /> : null}
 
         {aba === 'chat' ? <Chat mesChave={k} aoAvisar={mostrarToast} /> : null}
@@ -417,6 +366,36 @@ function Shell({ aoSair }: { aoSair: () => void }) {
           />
         ) : null}
       </main>
+
+      <BarraInferior
+        mostrarNovo={!SEM_NOVO.includes(aba)}
+        aoNovo={abrirNovo}
+        gravacao={gravacao}
+        aoSalvarAgora={() => void salvarAgora()}
+        aoAvisar={mostrarToast}
+        aoAtualizarDados={() => setRecarga((n) => n + 1)}
+        aoAjustes={() => setAjustesAberto(true)}
+        aoSair={() => {
+          void salvarAgora()
+          aoSair()
+        }}
+      />
+
+      <SeletorPeriodo
+        aberto={periodoAberto}
+        aoFechar={() => setPeriodoAberto(false)}
+        ano={ano}
+        mes={mes}
+        aoEscolher={(a, m) => {
+          setAno(a)
+          setMes(m)
+          setFiltro('todos')
+        }}
+        mesesComDados={mesesComDados}
+        contas={estado.contas}
+        contaAtiva={contaAtiva}
+        aoTrocarConta={(id) => dispatch({ t: 'config', patch: { contaAtiva: id } })}
+      />
 
       <FormLancamento
         aberto={formAberto}
