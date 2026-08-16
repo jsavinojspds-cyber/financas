@@ -25,7 +25,9 @@ export default defineConfig({
       injectRegister: null,
       manifest: false, // usamos public/manifest.webmanifest escrito à mão
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,woff2,png,svg,webmanifest}'],
+        // json entra por causa do mercado.json: sem ele no precache, a aba
+        // "Hoje" ficaria sem cotações offline.
+        globPatterns: ['**/*.{js,css,html,woff2,png,svg,webmanifest,json}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       devOptions: { enabled: false },

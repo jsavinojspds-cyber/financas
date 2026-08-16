@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ProvedorLoja, useLoja } from '@/state/store'
 import { TelaPin } from '@/features/pin/TelaPin'
 import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
+import { PainelManha } from '@/features/agente/PainelManha'
 import { Botao, Confirmar, Toast, cx, type DadosToast } from '@/components/ui'
 import { IndicadorGravacao } from '@/components/IndicadorGravacao'
 import { SeletorConta } from '@/features/contas/SeletorConta'
@@ -25,6 +26,7 @@ import { usarNotificacoes } from '@/features/notificacoes/usarNotificacoes'
 import type { EstadoApp, Lancamento, Recorrencia } from '@/types'
 
 export type Aba =
+  | 'hoje'
   | 'resumo'
   | 'receitas'
   | 'despesas'
@@ -35,6 +37,7 @@ export type Aba =
   | 'sms'
 
 const ABAS: { k: Aba; l: string }[] = [
+  { k: 'hoje', l: '☀️ Hoje' },
   { k: 'resumo', l: 'Resumo' },
   { k: 'receitas', l: 'Receitas' },
   { k: 'despesas', l: 'Despesas' },
@@ -46,7 +49,7 @@ const ABAS: { k: Aba; l: string }[] = [
 ]
 
 /** Abas em que o botão "+ Novo" não faz sentido. */
-const SEM_NOVO: Aba[] = ['fluxo', 'analise', 'anual', 'fixos', 'sms']
+const SEM_NOVO: Aba[] = ['hoje', 'fluxo', 'analise', 'anual', 'fixos', 'sms']
 
 export default function App() {
   return (
@@ -102,7 +105,7 @@ function Shell({ aoSair }: { aoSair: () => void }) {
   const [inicial] = useState(() => mesDeAbertura(estado, agora))
   const [ano, setAno] = useState(inicial[0])
   const [mes, setMes] = useState(inicial[1])
-  const [aba, setAba] = useState<Aba>('resumo')
+  const [aba, setAba] = useState<Aba>('hoje')
   const [filtro, setFiltro] = useState('todos')
   const [busca, setBusca] = useState('')
   const [toast, setToast] = useState<DadosToast | null>(null)
@@ -320,6 +323,8 @@ function Shell({ aoSair }: { aoSair: () => void }) {
       </header>
 
       <main className="mx-auto max-w-xl px-4 pb-24 pt-3">
+        {aba === 'hoje' ? <PainelManha /> : null}
+
         {aba === 'resumo' ? (
           <Resumo
             lista={lista}

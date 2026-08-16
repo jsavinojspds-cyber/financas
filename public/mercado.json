@@ -1,0 +1,50 @@
+{
+  "gerado_em": "2026-08-16T22:15:55.201Z",
+  "indicadores": [
+    {
+      "id": "ibov",
+      "rotulo": "Ibovespa",
+      "valor": 166934.2,
+      "variacao": -3.233843246595902,
+      "formato": "pontos"
+    },
+    {
+      "id": "ifix",
+      "rotulo": "IFIX",
+      "valor": 3686.33,
+      "variacao": -0.17115079956129509,
+      "formato": "pontos"
+    },
+    {
+      "id": "usd",
+      "rotulo": "Dólar",
+      "valor": 5.222,
+      "variacao": -0.009571,
+      "formato": "moeda"
+    },
+    {
+      "id": "selic",
+      "rotulo": "Selic",
+      "valor": 13.89987480014514,
+      "variacao": null,
+      "formato": "percent",
+      "nota": "a.a."
+    },
+    {
+      "id": "cdi",
+      "rotulo": "CDI",
+      "valor": 13.89987480014514,
+      "variacao": null,
+      "formato": "percent",
+      "nota": "a.a."
+    },
+    {
+      "id": "ipca",
+      "rotulo": "IPCA",
+      "valor": 0.07,
+      "variacao": null,
+      "formato": "percent",
+      "nota": "no mês"
+    }
+  ]
+}

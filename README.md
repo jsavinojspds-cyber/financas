@@ -136,6 +136,46 @@ pelo campo `updatedAt`. Editar offline em dois aparelhos ao mesmo tempo faz o
 último a sincronizar prevalecer. Para um app pessoal isso é previsível e fácil
 de auditar; o backup JSON continua sendo a rede de segurança.
 
+## Aba ☀️ Hoje — o resumo da manhã
+
+Duas metades com origens diferentes, de propósito.
+
+**A análise dos seus números é calculada no aparelho.** Contas vencendo,
+atrasos, saldo projetado, o dia em que o caixa fica negativo, categoria acima
+da média dos 3 meses anteriores, taxa de poupança, atrasos por conta. Nenhum
+dado financeiro sai do iPhone, funciona offline e não custa nada por consulta.
+
+**As cotações vêm de um arquivo estático**, `public/mercado.json`, gerado pelo
+workflow `.github/workflows/mercado.yml` às 8h e às 11h de Manaus em dias
+úteis. O app só lê o arquivo pronto — que entra no precache do Service Worker
+e continua visível offline, com a idade do dado à vista.
+
+O motivo do rodeio é CORS: Ibovespa e IFIX não têm fonte gratuita que o
+navegador possa chamar direto. No servidor do Actions não há CORS, então o
+problema desaparece. Fontes, todas abertas e sem chave:
+
+| Indicador | Fonte |
+| --- | --- |
+| Ibovespa, IFIX | Yahoo Finance (`^BVSP`, `IFIX.SA`) |
+| Dólar | AwesomeAPI — também atualizado ao vivo no app, é o único com CORS aberto |
+| Selic, CDI, IPCA | Banco Central (SGS 11, 12, 433) |
+
+Cada fonte é buscada de forma independente: uma API fora do ar não derruba o
+briefing, e se nenhuma responder o `mercado.json` anterior permanece
+publicado.
+
+Duas decisões deliberadas:
+
+- **O briefing não contém dados pessoais.** O `mercado.json` fica publicamente
+  legível na URL do Pages — saldos e contas a pagar nunca entram ali.
+- **O painel descreve, não recomenda.** Nada de "compre" ou "venda": a
+  diferença entre resumo de mercado e recomendação de investimento importa, e
+  esta segunda exige assessor certificado.
+
+Para escrever prosa de IA sobre os seus números seria preciso enviá-los a um
+servidor com a chave do modelo — uma chave no bundle vazaria, já que o
+repositório é público. Esse caminho passa pelo Supabase, ainda não feito.
+
 ## Notificações
 
 Locais, sem servidor: o Service Worker mostra um aviso com as contas a vencer

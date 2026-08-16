@@ -81,6 +81,30 @@ self.addEventListener('fetch', (evento) => {
     return
   }
 
+  // Cotações: rede primeiro, cache como rede de segurança.
+  //
+  // Este é o único arquivo do precache que muda sem mudar de nome — os
+  // demais têm hash. Servi-lo cache-first congelaria os indicadores na
+  // versão do dia da instalação.
+  if (url.pathname.endsWith('/mercado.json')) {
+    evento.respondWith(
+      (async () => {
+        const cache = await caches.open(CACHE_ESTATICO)
+        try {
+          const resposta = await fetch(req)
+          if (resposta.ok) cache.put(req, resposta.clone())
+          return resposta
+        } catch {
+          const emCache = await cache.match(req)
+          return emCache ?? new Response('{"indicadores":[]}', {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+      })(),
+    )
+    return
+  }
+
   // Demais assets: cache primeiro (todos têm hash no nome, então não envelhecem).
   evento.respondWith(
     (async () => {

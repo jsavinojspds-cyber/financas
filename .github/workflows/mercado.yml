@@ -1,0 +1,61 @@
+name: Atualizar mercado
+
+on:
+  schedule:
+    # 08:00 em Manaus (UTC-4) = 12:00 UTC, dias úteis.
+    # O cron do GitHub é sempre em UTC e não segue horário de verão —
+    # o Amazonas não adota, então este horário é estável o ano inteiro.
+    - cron: '0 12 * * 1-5'
+    # segunda passada no fim da manhã, para pegar o pregão já andando
+    - cron: '0 15 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: mercado
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    outputs:
+      mudou: ${{ steps.commit.outputs.mudou }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Buscar indicadores
+        # O script já tolera fonte fora do ar: só falha se NENHUMA responder,
+        # e nesse caso o mercado.json anterior permanece publicado.
+        run: node scripts/gerar-mercado.mjs
+
+      - name: Commitar se mudou
+        id: commit
+        run: |
+          if git diff --quiet -- public/mercado.json; then
+            echo "Sem alteração nas cotações."
+            echo "mudou=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/mercado.json
+          git commit -m "Cotações da manhã [skip ci]"
+          git push
+          echo "mudou=true" >> "$GITHUB_OUTPUT"
+
+  publicar:
+    needs: atualizar
+    if: needs.atualizar.outputs.mudou == 'true'
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

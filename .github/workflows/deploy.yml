@@ -5,6 +5,10 @@ on:
     branches: [main]
   # permite disparar manualmente pela aba Actions
   workflow_dispatch:
+  # chamado pelo workflow do mercado: um commit feito com o GITHUB_TOKEN não
+  # dispara outros workflows por push (proteção contra laço infinito), então
+  # a publicação precisa ser invocada explicitamente.
+  workflow_call:
 
 permissions:
   contents: read
