@@ -97,17 +97,46 @@ export async function enviarCodigo(c: ConfigSync, email: string): Promise<string
   }
 }
 
+/**
+ * Confirma o login com o que o usuário colar: o código de 6 dígitos OU o
+ * link inteiro recebido por e-mail.
+ *
+ * Aceitar os dois não é preciosismo. O modelo de e-mail padrão do Supabase
+ * envia um LINK; só quem edita o template para incluir `{{ .Token }}` recebe
+ * um código. Exigir código deixaria o login quebrado até alguém mexer no
+ * painel — e clicar no link, num PWA instalado, costuma abrir o Safari por
+ * fora do app, perdendo a sessão.
+ */
 export async function confirmarCodigo(
   c: ConfigSync,
   email: string,
-  codigo: string,
+  entrada: string,
 ): Promise<string | null> {
+  const bruto = entrada.trim()
+  if (!bruto) return 'Cole o código ou o link do e-mail'
+
   try {
     const sb = await obterCliente(c)
-    const { error } = await sb.auth.verifyOtp({ email, token: codigo.trim(), type: 'email' })
+
+    if (/^https?:\/\//i.test(bruto)) {
+      let hash: string | null = null
+      try {
+        const u = new URL(bruto)
+        hash = u.searchParams.get('token_hash') ?? u.searchParams.get('token')
+      } catch {
+        return 'Link inválido. Cole o endereço inteiro.'
+      }
+      if (!hash) return 'Não achei o token nesse link. Cole o endereço inteiro.'
+      const { error } = await sb.auth.verifyOtp({ token_hash: hash, type: 'email' })
+      return error ? error.message : null
+    }
+
+    const codigo = bruto.replace(/\D/g, '')
+    if (codigo.length < 6) return 'O código tem 6 dígitos'
+    const { error } = await sb.auth.verifyOtp({ email, token: codigo, type: 'email' })
     return error ? error.message : null
   } catch (e) {
-    return e instanceof Error ? e.message : 'Código inválido'
+    return e instanceof Error ? e.message : 'Não consegui confirmar'
   }
 }
 

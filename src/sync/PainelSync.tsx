@@ -218,18 +218,25 @@ export function PainelSync({ aoAvisar }: { aoAvisar: (m: string) => void }) {
       {passo === 'codigo' ? (
         <>
           <div>
-            <Rotulo>Código recebido</Rotulo>
+            <Rotulo>Código ou link do e-mail</Rotulo>
             <Campo
               value={codigo}
-              onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              inputMode="numeric"
+              onChange={(e) => setCodigo(e.target.value)}
               placeholder="000000"
-              className="font-mono tracking-[0.4em]"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="font-mono"
             />
           </div>
+          <p className="text-[11px] leading-relaxed text-tinta-3">
+            Se o e-mail trouxer um código de 6 dígitos, digite-o. Se trouxer um botão ou link,
+            copie o endereço dele (mantenha pressionado → Copiar) e cole aqui — não clique, para
+            não sair do app.
+          </p>
           <Botao
             variante="primario"
-            disabled={ocupado || codigo.length < 6}
+            disabled={ocupado || codigo.trim().length < 6}
             onClick={() => void confirmar()}
           >
             {ocupado ? 'Confirmando…' : 'Confirmar'}
