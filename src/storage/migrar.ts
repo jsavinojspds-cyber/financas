@@ -11,7 +11,7 @@ import {
   type Lancamento,
 } from '@/types'
 import { SEED_ABRIL_2026 } from '@/dados/seed-abril-2026'
-import { idbGet, lsGet } from './idb'
+import { idbChaves, idbGet, lsGet } from './idb'
 import { novoId } from '@/lib/id'
 
 /** Chaves do storage. As v4 continuam existindo intactas como rede de segurança. */
@@ -196,6 +196,91 @@ async function lerChave(chave: string): Promise<unknown> {
 }
 
 /**
+ * Relê o `fin-v4` e migra, ignorando o `fin-v5` que já exista.
+ *
+ * Existe porque a carga normal é uma escada de prioridade: achou `fin-v5`,
+ * nem olha o `fin-v4`. Se o app abriu uma vez num storage vazio, gravou a
+ * base inicial como `fin-v5` e a partir daí a migração ficaria bloqueada
+ * para sempre, mesmo com os dados antigos intactos ao lado. Este é o botão
+ * de resgate para essa situação.
+ */
+export async function migrarV4Forcado(): Promise<{
+  estado: EstadoApp
+  migrados: number
+} | null> {
+  const v4 = await lerChave(K_V4_DADOS)
+  if (!v4 || typeof v4 !== 'object' || !Object.keys(v4).length) return null
+  const cats = await lerChave(K_V4_CATS)
+  return migrarV4(v4 as Record<string, unknown>, cats)
+}
+
+export interface ItemDiagnostico {
+  chave: string
+  /** tamanho em bytes do JSON gravado */
+  bytes: number
+  /** quantos lançamentos dá para contar dentro, quando aplicável */
+  lancamentos: number | null
+}
+
+export interface Diagnostico {
+  idb: ItemDiagnostico[]
+  ls: ItemDiagnostico[]
+  idbDisponivel: boolean
+}
+
+function contarLancamentos(bruto: string): number | null {
+  try {
+    const o = JSON.parse(bruto) as Record<string, unknown>
+    // aceita tanto o mapa do v4 quanto o estado v5
+    const mapa = (o?.['lancamentos'] ?? o) as Record<string, unknown>
+    if (!mapa || typeof mapa !== 'object') return null
+    let n = 0
+    let achouMes = false
+    for (const [k, v] of Object.entries(mapa)) {
+      if (/^\d{4}-\d{2}$/.test(k) && Array.isArray(v)) {
+        achouMes = true
+        n += v.length
+      }
+    }
+    return achouMes ? n : null
+  } catch {
+    return null
+  }
+}
+
+/** Fotografia do que existe em cada storage. Usado na tela de Ajustes para
+ *  diagnosticar à distância um aparelho que não dá para inspecionar. */
+export async function diagnosticoStorage(): Promise<Diagnostico> {
+  const interessantes = [K_ESTADO, K_V4_DADOS, K_V4_CATS, K_PIN, K_SYNC]
+
+  const chavesIdb = await idbChaves()
+  const idb: ItemDiagnostico[] = []
+  for (const chave of interessantes) {
+    if (!chavesIdb.includes(chave)) continue
+    const bruto = await idbGet<string>(chave)
+    if (typeof bruto !== 'string') continue
+    idb.push({
+      chave,
+      bytes: bruto.length,
+      lancamentos: chave === K_PIN ? null : contarLancamentos(bruto),
+    })
+  }
+
+  const ls: ItemDiagnostico[] = []
+  for (const chave of interessantes) {
+    const bruto = lsGet(chave)
+    if (typeof bruto !== 'string' || !bruto) continue
+    ls.push({
+      chave,
+      bytes: bruto.length,
+      lancamentos: chave === K_PIN ? null : contarLancamentos(bruto),
+    })
+  }
+
+  return { idb, ls, idbDisponivel: chavesIdb.length > 0 || idb.length > 0 }
+}
+
+/**
  * Carrega o estado do app na ordem: v5 → migração do v4 → seed inicial.
  * Nunca lança: qualquer falha cai no estado vazio para o app abrir mesmo assim.
  */
@@ -211,11 +296,26 @@ export async function carregarEstado(): Promise<ResultadoCarga> {
       return { estado, origem: 'migrado-v4', migrados }
     }
 
-    // Instalação virgem: volta com abril/2026 em vez de abrir vazio.
-    const estado = estadoVazio()
-    estado.lancamentos['2026-04'] = SEED_ABRIL_2026.map((l) => ({ ...l }))
-    return { estado, origem: 'seed', migrados: 0 }
+    // Não achou nada. NÃO gravamos nada aqui de propósito.
+    //
+    // A versão anterior carregava a base de abril automaticamente e o
+    // auto-save a persistia como `fin-v5` em seguida. O efeito colateral era
+    // grave: como a carga é uma escada (achou v5, nem olha o v4), bastava
+    // abrir o app uma vez num storage vazio — outro navegador, outro
+    // container do iOS — para a migração ficar bloqueada para sempre, com os
+    // dados antigos intactos e inalcançáveis ao lado.
+    //
+    // Agora o app pergunta o que fazer antes de escrever qualquer coisa.
+    return { estado: estadoVazio(), origem: 'vazio', migrados: 0 }
   } catch {
     return { estado: estadoVazio(), origem: 'vazio', migrados: 0 }
   }
+}
+
+/** Base de abril/2026 do app original, oferecida como opção na primeira
+ *  abertura em vez de aplicada sozinha. */
+export function estadoDeExemplo(): EstadoApp {
+  const estado = estadoVazio()
+  estado.lancamentos['2026-04'] = SEED_ABRIL_2026.map((l) => ({ ...l }))
+  return estado
 }

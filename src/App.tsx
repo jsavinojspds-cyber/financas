@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ProvedorLoja, useLoja } from '@/state/store'
 import { TelaPin } from '@/features/pin/TelaPin'
+import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
 import { Botao, Confirmar, Toast, cx, type DadosToast } from '@/components/ui'
 import { IndicadorGravacao } from '@/components/IndicadorGravacao'
 import { SeletorConta } from '@/features/contas/SeletorConta'
@@ -56,10 +57,12 @@ export default function App() {
 }
 
 function Raiz() {
-  const { carregando } = useLoja()
+  const { carregando, precisaEscolher } = useLoja()
   const [desbloqueado, setDesbloqueado] = useState(false)
 
   if (!desbloqueado) return <TelaPin aoDesbloquear={() => setDesbloqueado(true)} />
+
+  if (!carregando && precisaEscolher) return <PrimeiraAbertura />
 
   if (carregando) {
     return (

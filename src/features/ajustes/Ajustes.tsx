@@ -1,9 +1,15 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Botao, Campo, Confirmar, Folha, Neu, Rotulo, cx } from '@/components/ui'
 import { useLoja } from '@/state/store'
 import { gravarPin } from '@/features/pin/pin'
-import { migrarV4, normalizarEstado } from '@/storage/migrar'
-import type { ArquivoBackup, Conta } from '@/types'
+import {
+  diagnosticoStorage,
+  migrarV4,
+  migrarV4Forcado,
+  normalizarEstado,
+  type Diagnostico,
+} from '@/storage/migrar'
+import type { ArquivoBackup, Conta, EstadoApp } from '@/types'
 import { novoId } from '@/lib/id'
 import {
   ehPwaInstalado,
@@ -13,7 +19,7 @@ import {
 } from '@/features/notificacoes/notificacoes'
 import { PainelSync } from '@/sync/PainelSync'
 
-type Secao = 'menu' | 'pin' | 'contas' | 'backup' | 'notificacoes' | 'sync'
+type Secao = 'menu' | 'pin' | 'contas' | 'backup' | 'notificacoes' | 'sync' | 'recuperar'
 
 export function Ajustes({
   aberto,
@@ -33,6 +39,7 @@ export function Ajustes({
     backup: 'Backup e restauração',
     notificacoes: 'Notificações',
     sync: 'Sincronização',
+    recuperar: 'Recuperar dados',
   }
 
   return (
@@ -57,6 +64,7 @@ export function Ajustes({
       {secao === 'backup' ? <SecaoBackup aoAvisar={aoAvisar} /> : null}
       {secao === 'notificacoes' ? <SecaoNotificacoes aoAvisar={aoAvisar} /> : null}
       {secao === 'sync' ? <PainelSync aoAvisar={aoAvisar} /> : null}
+      {secao === 'recuperar' ? <SecaoRecuperar aoAvisar={aoAvisar} /> : null}
     </Folha>
   )
 }
@@ -74,6 +82,12 @@ function Menu({ aoAbrir }: { aoAbrir: (s: Secao) => void }) {
       dica: `${estado.contas.length} cadastrada(s)`,
     },
     { s: 'backup', icone: '💾', titulo: 'Backup e restauração', dica: 'Exportar / importar JSON' },
+    {
+      s: 'recuperar',
+      icone: '🛟',
+      titulo: 'Recuperar dados do app antigo',
+      dica: 'Relê a chave fin-v4',
+    },
     {
       s: 'notificacoes',
       icone: '🔔',
@@ -477,6 +491,141 @@ function SecaoBackup({ aoAvisar }: { aoAvisar: (m: string) => void }) {
         aoConfirmar={() => confirmarImport && aplicarImport(confirmarImport)}
         aoCancelar={() => setConfirmarImport(null)}
       />
+    </div>
+  )
+}
+
+// ── Recuperação ─────────────────────────────────────────────────────
+
+/**
+ * Saída para quem já ficou preso no estado ruim: o app abriu num storage
+ * vazio, gravou algo como `fin-v5`, e desde então a carga normal nem olha
+ * mais o `fin-v4`. Aqui o `fin-v4` é lido à força.
+ */
+function SecaoRecuperar({ aoAvisar }: { aoAvisar: (m: string) => void }) {
+  const { estado, dispatch } = useLoja()
+  const [diag, setDiag] = useState<Diagnostico | null>(null)
+  const [achado, setAchado] = useState<{ estado: EstadoApp; migrados: number } | null>(null)
+  const [ocupado, setOcupado] = useState(false)
+  const [semDados, setSemDados] = useState(false)
+
+  useEffect(() => {
+    void diagnosticoStorage().then(setDiag)
+  }, [])
+
+  const atuais = Object.values(estado.lancamentos).reduce((s, l) => s + l.length, 0)
+
+  async function procurar() {
+    setOcupado(true)
+    setSemDados(false)
+    const r = await migrarV4Forcado()
+    setOcupado(false)
+    if (!r) {
+      setSemDados(true)
+      return
+    }
+    setAchado(r)
+  }
+
+  const todos = [...(diag?.idb ?? []), ...(diag?.ls ?? [])]
+  const infoV4 = todos.find((i) => i.chave === 'fin-v4')
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Neu className="p-4" sombra="neu-xs">
+        <p className="text-[12px] leading-relaxed text-tinta-2">
+          Se o app abriu sem os seus lançamentos, os dados antigos provavelmente continuam
+          gravados aqui — a carga normal só não chega até eles depois que já existe um estado
+          novo salvo. Este botão relê a chave <code className="font-mono">fin-v4</code>{' '}
+          diretamente.
+        </p>
+      </Neu>
+
+      {diag ? (
+        <Neu className="p-3.5" sombra="neu-in">
+          <h4 className="text-[10px] font-bold uppercase tracking-wider text-tinta-3">
+            O que existe neste armazenamento
+          </h4>
+          {todos.length === 0 ? (
+            <p className="mt-1 text-[12px] text-tinta-3">Nada gravado.</p>
+          ) : (
+            <ul className="mt-1.5 flex flex-col gap-0.5">
+              {diag.idb.map((i) => (
+                <li key={`i${i.chave}`} className="flex justify-between gap-2 font-mono text-[11px]">
+                  <span className="text-tinta">IDB · {i.chave}</span>
+                  <span className="text-tinta-2">
+                    {i.lancamentos !== null ? `${i.lancamentos} lanç. · ` : ''}
+                    {(i.bytes / 1024).toFixed(1)} KB
+                  </span>
+                </li>
+              ))}
+              {diag.ls.map((i) => (
+                <li key={`l${i.chave}`} className="flex justify-between gap-2 font-mono text-[11px]">
+                  <span className="text-tinta">LS · {i.chave}</span>
+                  <span className="text-tinta-2">
+                    {i.lancamentos !== null ? `${i.lancamentos} lanç. · ` : ''}
+                    {(i.bytes / 1024).toFixed(1)} KB
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Neu>
+      ) : null}
+
+      {!achado ? (
+        <>
+          <Botao
+            variante="primario"
+            disabled={ocupado || (diag !== null && !infoV4)}
+            onClick={() => void procurar()}
+          >
+            {ocupado ? 'Procurando…' : '🛟 Procurar dados do app antigo'}
+          </Botao>
+          {diag !== null && !infoV4 ? (
+            <p className="text-[11px] leading-relaxed text-tinta-3">
+              Não há <code className="font-mono">fin-v4</code> neste armazenamento. Se você usava
+              o app pelo ícone da tela de início, abra por ele: no iOS o app instalado e o Safari
+              podem ter armazenamentos separados. Se não, restaure pelo backup em Backup e
+              restauração.
+            </p>
+          ) : null}
+          {semDados ? (
+            <p className="text-[12px] font-semibold text-despesa">
+              Nada encontrado na chave fin-v4.
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <Neu className="p-4" sombra="neu-xs">
+          <h4 className="text-[14px] font-bold text-tinta">
+            Encontrei {achado.migrados} lançamentos
+          </h4>
+          <p className="mt-1 text-[12px] leading-relaxed text-tinta-2">
+            Meses: {Object.keys(achado.estado.lancamentos).sort().join(', ') || '—'}.
+          </p>
+          <p className="mt-2 text-[12px] leading-relaxed text-tinta-2">
+            Restaurar substitui o que está no app agora ({atuais} lançamentos). O{' '}
+            <code className="font-mono">fin-v4</code> continua intacto de qualquer forma.
+          </p>
+          <div className="mt-3 flex gap-2.5">
+            <Botao className="flex-1" onClick={() => setAchado(null)}>
+              Cancelar
+            </Botao>
+            <Botao
+              className="flex-[2]"
+              variante="primario"
+              onClick={() => {
+                dispatch({ t: 'substituir', estado: achado.estado })
+                aoAvisar(`${achado.migrados} lançamentos recuperados`)
+                setAchado(null)
+              }}
+            >
+              Restaurar
+            </Botao>
+          </div>
+        </Neu>
+      )}
     </div>
   )
 }
