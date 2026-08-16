@@ -8,6 +8,7 @@ import { Confirmar, Toast, type DadosToast } from '@/components/ui'
 import { AvisoAtualizacao } from '@/components/BotaoAtualizar'
 import { IndicadorGravacao } from '@/components/IndicadorGravacao'
 import { BarraInferior } from '@/components/BarraInferior'
+import { BarraLateral } from '@/components/BarraLateral'
 import { SeletorPeriodo } from '@/components/SeletorPeriodo'
 import { Resumo } from '@/features/resumo/Resumo'
 import { ListaLancamentos } from '@/features/lancamentos/ListaLancamentos'
@@ -227,25 +228,54 @@ function Shell({ aoSair }: { aoSair: () => void }) {
   const contaDoChip = contaAtiva === 'todas' ? null : (estado.contas.find((c) => c.id === contaAtiva) ?? null)
 
   return (
-    <div className="min-h-[100dvh]">
-      {/* Sem barra no topo: num iPhone grande aquela faixa não é alcançável
-          pelo polegar, então nada que se toca com frequência fica lá. Só o
-          respiro do notch e um rótulo de contexto, para leitura. */}
-      <div className="pad-topo" />
-      <div className="mx-auto max-w-xl px-4 pt-2">
+    <div className="min-h-[100dvh] lg:pl-64">
+      {/* Coluna lateral só a partir de 1024px; no celular ela não existe. */}
+      <BarraLateral
+        abas={ABAS}
+        aba={aba}
+        aoTrocarAba={setAba}
+        ano={ano}
+        mes={mes}
+        conta={contaDoChip}
+        aoMesAnterior={() => irMes(-1)}
+        aoProximoMes={() => irMes(1)}
+        aoAbrirPeriodo={() => setPeriodoAberto(true)}
+        mostrarNovo={!SEM_NOVO.includes(aba)}
+        aoNovo={abrirNovo}
+        gravacao={gravacao}
+        aoSalvarAgora={() => void salvarAgora()}
+        aoAvisar={mostrarToast}
+        aoAtualizarDados={() => setRecarga((n) => n + 1)}
+        aoAjustes={() => setAjustesAberto(true)}
+        aoSair={() => {
+          void salvarAgora()
+          aoSair()
+        }}
+      />
+
+      {/* Sem barra no topo no celular: num iPhone grande aquela faixa não é
+          alcançável pelo polegar, então nada que se toca com frequência fica
+          lá. Só o respiro do notch e um rótulo de contexto, para leitura —
+          que no desktop é redundante com a coluna lateral. */}
+      <div className="pad-topo lg:hidden" />
+      <div className="mx-auto max-w-xl px-4 pt-2 lg:hidden">
         <div className="flex items-baseline justify-between gap-3">
           <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-tinta-3">
             {labelMes(ano, mes)}
             {contaDoChip ? ` · ${contaDoChip.nome}` : ''}
           </p>
-          {/* o estado de gravação é para ler, não para tocar — cabe no topo */}
           <IndicadorGravacao estado={gravacao} aoTentarNovamente={() => void salvarAgora()} />
         </div>
         <AvisoAtualizacao />
       </div>
 
-      {/* pb-36: espaço para a barra de navegação fixa não cobrir o conteúdo */}
-      <main className="mx-auto max-w-xl px-4 pb-36 pt-2">
+      <div className="hidden px-6 pt-5 lg:block">
+        <AvisoAtualizacao />
+      </div>
+
+      {/* pb-36 no celular: espaço para a barra fixa. No desktop ela não existe,
+          e o conteúdo pode ficar mais largo. */}
+      <main className="mx-auto max-w-xl px-4 pb-36 pt-2 lg:max-w-3xl lg:px-6 lg:pb-10 lg:pt-4">
         {aba === 'hoje' ? <PainelManha key={recarga} /> : null}
 
         {aba === 'resumo' ? (
@@ -324,6 +354,8 @@ function Shell({ aoSair }: { aoSair: () => void }) {
         ) : null}
       </main>
 
+      {/* barra inferior: só no celular; no desktop quem navega é a lateral */}
+      <div className="lg:hidden">
       <BarraInferior
         abas={ABAS}
         aba={aba}
@@ -344,6 +376,7 @@ function Shell({ aoSair }: { aoSair: () => void }) {
           aoSair()
         }}
       />
+      </div>
 
       <SeletorPeriodo
         aberto={periodoAberto}
