@@ -3,6 +3,7 @@ import { ProvedorLoja, useLoja } from '@/state/store'
 import { TelaPin } from '@/features/pin/TelaPin'
 import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
 import { PainelManha } from '@/features/agente/PainelManha'
+import { Carteira } from '@/features/carteira/Carteira'
 import { Botao, Confirmar, Toast, cx, type DadosToast } from '@/components/ui'
 import { IndicadorGravacao } from '@/components/IndicadorGravacao'
 import { AvisoAtualizacao, BotaoAtualizar } from '@/components/BotaoAtualizar'
@@ -35,6 +36,7 @@ export type Aba =
   | 'analise'
   | 'anual'
   | 'fixos'
+  | 'carteira'
   | 'sms'
 
 const ABAS: { k: Aba; l: string }[] = [
@@ -46,11 +48,12 @@ const ABAS: { k: Aba; l: string }[] = [
   { k: 'analise', l: '🥧 Análise' },
   { k: 'anual', l: '📅 Anual' },
   { k: 'fixos', l: '🔁 Fixos' },
+  { k: 'carteira', l: '💼 Carteira' },
   { k: 'sms', l: '📋 SMS' },
 ]
 
 /** Abas em que o botão "+ Novo" não faz sentido. */
-const SEM_NOVO: Aba[] = ['hoje', 'fluxo', 'analise', 'anual', 'fixos', 'sms']
+const SEM_NOVO: Aba[] = ['hoje', 'fluxo', 'analise', 'anual', 'fixos', 'carteira', 'sms']
 
 export default function App() {
   return (
@@ -395,6 +398,8 @@ function Shell({ aoSair }: { aoSair: () => void }) {
             aoAvisar={mostrarToast}
           />
         ) : null}
+
+        {aba === 'carteira' ? <Carteira /> : null}
 
         {aba === 'sms' ? (
           <ColarSMS

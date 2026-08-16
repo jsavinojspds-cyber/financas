@@ -36,17 +36,20 @@ jobs:
         # e nesse caso o mercado.json anterior permanece publicado.
         run: node scripts/gerar-mercado.mjs
 
+      - name: Buscar cotações dos fundos
+        run: node scripts/gerar-fiis.mjs
+
       - name: Commitar se mudou
         id: commit
         run: |
-          if git diff --quiet -- public/mercado.json; then
+          if git diff --quiet -- public/mercado.json public/fiis.json; then
             echo "Sem alteração nas cotações."
             echo "mudou=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/mercado.json
+          git add public/mercado.json public/fiis.json
           git commit -m "Cotações da manhã [skip ci]"
           git push
           echo "mudou=true" >> "$GITHUB_OUTPUT"

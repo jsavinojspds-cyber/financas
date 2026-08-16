@@ -71,6 +71,20 @@ export interface Recorrencia {
   updatedAt: number
 }
 
+/**
+ * Posição em um fundo. Só acompanhamento: não há compra, venda nem
+ * recomendação — o app registra o que você tem e mostra como evoluiu.
+ */
+export interface Posicao {
+  /** código de negociação, ex.: HGLG11 */
+  ticker: string
+  quantidade: number
+  /** preço médio de aquisição; null quando não informado — aí só dá para
+   *  mostrar a variação do dia, não a rentabilidade */
+  precoMedio: number | null
+  updatedAt: number
+}
+
 export interface ConfigApp {
   /** id da conta selecionada, ou 'todas' */
   contaAtiva: string
@@ -90,6 +104,8 @@ export interface EstadoApp {
   catReceita: string[]
   contas: Conta[]
   recorrencias: Recorrencia[]
+  /** carteira de fundos, só para acompanhamento */
+  carteira: Posicao[]
   config: ConfigApp
   updatedAt: number
 }
@@ -166,6 +182,7 @@ export function estadoVazio(): EstadoApp {
     catReceita: [...CAT_RECEITA_PADRAO],
     contas: CONTAS_PADRAO.map((c) => ({ ...c })),
     recorrencias: [],
+    carteira: [],
     config: {
       contaAtiva: 'todas',
       notificacoes: false,

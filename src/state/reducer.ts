@@ -4,6 +4,7 @@ import {
   type ConfigApp,
   type EstadoApp,
   type Lancamento,
+  type Posicao,
   type Recorrencia,
 } from '@/types'
 import { materializar, somarMeses } from '@/lib/recorrencia'
@@ -22,6 +23,7 @@ export type Acao =
   | { t: 'recorrencia-salvar'; item: Recorrencia }
   | { t: 'recorrencia-remover'; id: string; apagarFuturos: boolean; aPartirDe: string }
   | { t: 'materializar'; ateMes: string }
+  | { t: 'carteira'; posicoes: Posicao[] }
   | { t: 'config'; patch: Partial<ConfigApp> }
   | { t: 'substituir'; estado: EstadoApp }
 
@@ -161,6 +163,9 @@ export function reducer(estado: EstadoApp, acao: Acao): EstadoApp {
         config: { ...estado.config, ultimaGeracaoRec: ateMes },
       })
     }
+
+    case 'carteira':
+      return tocar({ ...estado, carteira: acao.posicoes })
 
     case 'config':
       return tocar({ ...estado, config: { ...estado.config, ...acao.patch } })

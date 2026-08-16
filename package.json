@@ -10,7 +10,9 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "tsc -b --noEmit",
     "gen:icons": "node scripts/gen-icons.mjs",
-    "gen:fonts": "node scripts/fetch-fonts.mjs"
+    "gen:fonts": "node scripts/fetch-fonts.mjs",
+    "gen:fiis": "node scripts/gerar-fiis.mjs",
+    "gen:mercado": "node scripts/gerar-mercado.mjs && node scripts/gerar-fiis.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

@@ -176,6 +176,46 @@ Para escrever prosa de IA sobre os seus números seria preciso enviá-los a um
 servidor com a chave do modelo — uma chave no bundle vazaria, já que o
 repositório é público. Esse caminho passa pelo Supabase, ainda não feito.
 
+## Aba 💼 Carteira — acompanhamento de fundos
+
+Registra posições em FIIs e mostra como evoluíram. **Só leitura**: não há
+compra, venda nem sugestão de alocação.
+
+Para cadastrar, cole a lista da corretora. O parser aceita os formatos que
+aparecem na prática e ignora cabeçalho e texto solto:
+
+```
+HGLG11 100 145,00        →  100 cotas, PM 145,00
+MXRF11;500;9,80          →  500 cotas, PM 9,80
+XPML11,25,101.25         →   25 cotas, PM 101,25
+FII KNRI11 - 30 cotas    →   30 cotas, sem PM
+BTLG11 1.200 99,97       →  1200 cotas, PM 99,97
+```
+
+Os dois últimos exemplos são o motivo de o parser não ser trivial. No Brasil a
+vírgula é decimal **e** separador de campo em CSV, e o ponto é milhar **e**
+decimal. As regras adotadas:
+
+- com vírgula e ponto na mesma quantia, o decimal é o que vem por último
+  (`1.234,56` ≠ `1,234.56`);
+- com só um separador, exatamente três dígitos depois dele indicam milhar
+  (`1.200` → 1200) e qualquer outra quantidade indica decimal (`99,97`);
+- a vírgula só divide campos quando não há espaço, tab ou `;` na linha.
+
+O preço médio é opcional — sem ele o app mostra a variação do dia, mas não a
+rentabilidade desde a compra.
+
+### Privacidade das posições
+
+`public/fiis.json` traz um **universo** de FIIs líquidos
+(`scripts/universo-fiis.json`), não a sua carteira. O arquivo é publicamente
+legível na URL do Pages; quais fundos você tem e quantas cotas ficam só no
+aparelho, e o cruzamento é feito localmente pelo app.
+
+Acrescentar um ticker ao universo não revela que você o possui — a lista cobre
+os fundos mais negociados da bolsa. Se faltar algum, inclua e rode
+`npm run gen:mercado`.
+
 ## Notificações
 
 Locais, sem servidor: o Service Worker mostra um aviso com as contas a vencer

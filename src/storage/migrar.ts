@@ -174,6 +174,8 @@ export function normalizarEstado(bruto: unknown): EstadoApp | null {
       Array.isArray(e.catReceita) && e.catReceita.length ? e.catReceita : CAT_RECEITA_PADRAO,
     contas: contas.length ? contas : CONTAS_PADRAO.map((c) => ({ ...c })),
     recorrencias: Array.isArray(e.recorrencias) ? e.recorrencias : [],
+    // Estado gravado antes da carteira existir não tem o campo.
+    carteira: Array.isArray(e.carteira) ? e.carteira : [],
     config: { ...base.config, ...(e.config ?? {}) },
     updatedAt: Number(e.updatedAt) || Date.now(),
   }

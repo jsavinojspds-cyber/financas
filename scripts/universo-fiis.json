@@ -1,0 +1,26 @@
+{
+  "_comentario": [
+    "Universo de FIIs cujas cotações o workflow publica em public/fiis.json.",
+    "",
+    "É deliberadamente um UNIVERSO, não a sua carteira. O arquivo publicado é",
+    "legível por qualquer um na URL do Pages, então ele não pode revelar o que",
+    "você tem. Suas posições e quantidades ficam só no aparelho; o app cruza",
+    "os preços localmente.",
+    "",
+    "Acrescentar um ticker aqui não diz que você o possui — a lista cobre os",
+    "FIIs mais líquidos da bolsa. Se faltar algum que você acompanha, é só",
+    "incluir e rodar: npm run gen:mercado",
+    "",
+    "Todos os códigos abaixo foram verificados: retornam cotação na fonte."
+  ],
+  "tickers": [
+    "HGLG11", "XPLG11", "BTLG11", "VILG11", "LVBI11", "GGRC11", "TRXF11",
+    "XPML11", "VISC11", "HSML11", "HGBS11",
+    "KNRI11", "PVBI11", "HGRE11", "RCRB11", "JSRE11", "BRCR11",
+    "MXRF11", "KNCR11", "KNIP11", "IRDM11", "RECR11", "CPTS11", "VGIP11",
+    "HGCR11", "RBRR11", "KNSC11", "DEVA11", "KNHY11", "VGHF11",
+    "XPSF11", "RBRF11", "HFOF11", "KFOF11",
+    "HGRU11", "RBRP11", "ALZR11", "VINO11", "TGAR11", "RZTR11",
+    "MCCI11", "BTCI11", "AFHI11"
+  ]
+}
