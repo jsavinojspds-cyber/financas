@@ -176,6 +176,41 @@ Para escrever prosa de IA sobre os seus números seria preciso enviá-los a um
 servidor com a chave do modelo — uma chave no bundle vazaria, já que o
 repositório é público. Esse caminho passa pelo Supabase, ainda não feito.
 
+## Aba 💬 Chat — comandos rápidos
+
+Uma caixa de texto que entende linguagem natural para lançar, buscar, pagar e
+excluir. **O interpretador é local e determinístico** — não há modelo de
+linguagem envolvido.
+
+Essa escolha não é uma limitação, é o desenho certo para o caso: um chat com
+IA precisaria de servidor (chave de API não pode ir num bundle público), teria
+latência de rede, não funcionaria offline e mandaria os lançamentos para fora
+do aparelho. Para `energia 78` virar despesa, o parser local ganha em tudo —
+inclusive em velocidade.
+
+```
+energia 78,08              lança a despesa
+pix mercado 250 dia 15     forma de pagamento e vencimento
++ salário 21620            receita (o "+" ou a palavra "recebi")
+drogasil 407 cartão pago   já marcado como pago
+apagar vivo                lista candidatos, um toque exclui
+pagar drogasil             marca como pago
+vivo                       sem valor = busca
+quanto falta pagar         totais do mês
+quanto gastei com saúde
+vencendo
+```
+
+**A categoria vem do seu próprio histórico.** Se "Energia Ap" sempre foi
+Moradia paga em débito, digitar `energia 78` reaproveita as duas coisas e o
+cartão mostra a etiqueta *"como das outras vezes"*. Sem histórico, cai numa
+tabela de palavras-chave (`mercado` → Alimentação, `uber` → Pessoal); sem
+nenhum dos dois, usa a primeira categoria da lista.
+
+Regras de desambiguação: com valor é lançamento, sem valor é busca, com verbo
+(`apagar`, `pagar`, `buscar`) é comando. `dia 15` que já passou entende como o
+mês seguinte. Toda ação destrutiva cai no Desfazer.
+
 ## Aba 💼 Carteira — acompanhamento de fundos
 
 Registra posições em FIIs e mostra como evoluíram. **Só leitura**: não há

@@ -4,6 +4,7 @@ import { TelaPin } from '@/features/pin/TelaPin'
 import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
 import { PainelManha } from '@/features/agente/PainelManha'
 import { Carteira } from '@/features/carteira/Carteira'
+import { Chat } from '@/features/chat/Chat'
 import { Botao, Confirmar, Toast, cx, type DadosToast } from '@/components/ui'
 import { IndicadorGravacao } from '@/components/IndicadorGravacao'
 import { AvisoAtualizacao, BotaoAtualizar } from '@/components/BotaoAtualizar'
@@ -29,6 +30,7 @@ import type { EstadoApp, Lancamento, Recorrencia } from '@/types'
 
 export type Aba =
   | 'hoje'
+  | 'chat'
   | 'resumo'
   | 'receitas'
   | 'despesas'
@@ -41,6 +43,7 @@ export type Aba =
 
 const ABAS: { k: Aba; l: string }[] = [
   { k: 'hoje', l: '☀️ Hoje' },
+  { k: 'chat', l: '💬 Chat' },
   { k: 'resumo', l: 'Resumo' },
   { k: 'receitas', l: 'Receitas' },
   { k: 'despesas', l: 'Despesas' },
@@ -53,7 +56,7 @@ const ABAS: { k: Aba; l: string }[] = [
 ]
 
 /** Abas em que o botão "+ Novo" não faz sentido. */
-const SEM_NOVO: Aba[] = ['hoje', 'fluxo', 'analise', 'anual', 'fixos', 'carteira', 'sms']
+const SEM_NOVO: Aba[] = ['hoje', 'chat', 'fluxo', 'analise', 'anual', 'fixos', 'carteira', 'sms']
 
 export default function App() {
   return (
@@ -336,6 +339,8 @@ function Shell({ aoSair }: { aoSair: () => void }) {
 
       <main className="mx-auto max-w-xl px-4 pb-24 pt-3">
         {aba === 'hoje' ? <PainelManha key={recarga} /> : null}
+
+        {aba === 'chat' ? <Chat mesChave={k} aoAvisar={mostrarToast} /> : null}
 
         {aba === 'resumo' ? (
           <Resumo
