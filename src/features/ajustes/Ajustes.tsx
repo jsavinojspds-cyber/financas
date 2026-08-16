@@ -18,6 +18,7 @@ import {
   permissaoAtual,
 } from '@/features/notificacoes/notificacoes'
 import { PainelSync } from '@/sync/PainelSync'
+import { VERSAO_BUILD } from '@/registrarSW'
 
 type Secao = 'menu' | 'pin' | 'contas' | 'backup' | 'notificacoes' | 'sync' | 'recuperar'
 
@@ -136,6 +137,19 @@ function Menu({ aoAbrir }: { aoAbrir: (s: Secao) => void }) {
             }
           />
           <Linha rotulo="Gravação" valor={gravacao === 'salvo' ? 'Tudo salvo' : gravacao} />
+          <Linha
+            rotulo="Versão"
+            valor={
+              VERSAO_BUILD === 'desenvolvimento'
+                ? 'dev'
+                : new Date(VERSAO_BUILD).toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+            }
+          />
         </dl>
         <p className="mt-2.5 text-[11px] leading-relaxed text-tinta-3">
           Salvamento é automático a cada alteração, em IndexedDB com espelho no localStorage.

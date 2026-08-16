@@ -5,6 +5,7 @@ import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
 import { PainelManha } from '@/features/agente/PainelManha'
 import { Botao, Confirmar, Toast, cx, type DadosToast } from '@/components/ui'
 import { IndicadorGravacao } from '@/components/IndicadorGravacao'
+import { AvisoAtualizacao, BotaoAtualizar } from '@/components/BotaoAtualizar'
 import { SeletorConta } from '@/features/contas/SeletorConta'
 import { Resumo } from '@/features/resumo/Resumo'
 import { ListaLancamentos } from '@/features/lancamentos/ListaLancamentos'
@@ -116,6 +117,8 @@ function Shell({ aoSair }: { aoSair: () => void }) {
     rascunhoNovo(chave(agora.getFullYear(), agora.getMonth()), 'pf', 'Outros'),
   )
   const [confirmarExclusao, setConfirmarExclusao] = useState<Lancamento | null>(null)
+  // Incrementado pelo botão 🔄: remonta o painel e refaz a busca das cotações.
+  const [recarga, setRecarga] = useState(0)
 
   const k = chave(ano, mes)
   const lista = useMemo(() => doMes(estado, k), [estado, k])
@@ -222,6 +225,10 @@ function Shell({ aoSair }: { aoSair: () => void }) {
             <h1 className="text-[17px] font-bold text-tinta">💰 Finanças</h1>
             <div className="flex items-center gap-2.5">
               <IndicadorGravacao estado={gravacao} aoTentarNovamente={() => void salvarAgora()} />
+              <BotaoAtualizar
+                aoAvisar={mostrarToast}
+                aoAtualizarDados={() => setRecarga((n) => n + 1)}
+              />
               <button
                 type="button"
                 onClick={() => setAjustesAberto(true)}
@@ -319,11 +326,13 @@ function Shell({ aoSair }: { aoSair: () => void }) {
               </Botao>
             ) : null}
           </div>
+
+          <AvisoAtualizacao />
         </div>
       </header>
 
       <main className="mx-auto max-w-xl px-4 pb-24 pt-3">
-        {aba === 'hoje' ? <PainelManha /> : null}
+        {aba === 'hoje' ? <PainelManha key={recarga} /> : null}
 
         {aba === 'resumo' ? (
           <Resumo

@@ -9,6 +9,11 @@ const BASE = '/financas/'
 
 export default defineConfig({
   base: BASE,
+  define: {
+    // Carimbo do build, mostrado em Ajustes: permite ao usuário dizer com
+    // precisão qual versão está rodando quando algo dá errado.
+    __BUILD__: JSON.stringify(new Date().toISOString()),
+  },
   // precisa espelhar os `paths` do tsconfig — o tsc resolve, o bundler não
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
