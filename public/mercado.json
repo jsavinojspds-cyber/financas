@@ -1,5 +1,5 @@
 {
-  "gerado_em": "2026-08-16T22:15:55.201Z",
+  "gerado_em": "2026-08-17T12:38:48.133Z",
   "indicadores": [
     {
       "id": "ibov",
@@ -14,13 +14,6 @@
       "valor": 3686.33,
       "variacao": -0.17115079956129509,
       "formato": "pontos"
-    },
-    {
-      "id": "usd",
-      "rotulo": "Dólar",
-      "valor": 5.222,
-      "variacao": -0.009571,
-      "formato": "moeda"
     },
     {
       "id": "selic",
@@ -46,5 +39,8 @@
       "formato": "percent",
       "nota": "no mês"
     }
+  ],
+  "falhas": [
+    "HTTP 429 em https://economia.awesomeapi.com.br/last/USD-BRL"
   ]
 }
