@@ -268,6 +268,24 @@ O Jean opera pelo Prompt de Comando do Windows, sem admin. Comando encadeado e p
 
 ## 10. Comandos
 
+**PM2: suba pelo `npm`, não pelo arquivo.**
+
+```bash
+pm2 start npm --name wa-agent -- start     # certo
+pm2 start src/listener.js --name wa-agent  # ERRADO
+```
+
+A segunda forma lança o script com o interpretador que o daemon do PM2
+guardou, que pode não ser o Node do sistema. Quando não é, o processo morre
+antes de escrever a primeira linha de log: `pm2 status` mostra `online` com
+o contador de reinícios subindo (23, 89, 107) e **os dois logs vazios** —
+nem `iniciando socket` aparece. Diagnosticado no MacBook com Node 26 e npm
+do Homebrew, 31/08.
+
+Sintoma parecido, causa diferente: **dois processos do listener ao mesmo
+tempo**. Eles brigam pela mesma sessão do WhatsApp e se derrubam. Confira
+com `pgrep -fl listener.js` — tem que voltar uma linha só.
+
 ```bash
 cd ~/wa-agent
 
