@@ -89,6 +89,7 @@ financas/
 ├── .gitignore             ← protege .env e auth_info_baileys/
 └── wa-agent/
     ├── README.md          ← passo a passo de instalação
+    ├── macos/instalar.sh  ← listener sob launchd, sem PM2 (nunca com sudo)
     ├── provision.sh       ← setup da VPS (idempotente, para e avisa)
     ├── package.json
     ├── .env               ← NUNCA commitar (chmod 600)
@@ -268,7 +269,32 @@ O Jean opera pelo Prompt de Comando do Windows, sem admin. Comando encadeado e p
 
 ## 10. Comandos
 
-**PM2: suba pelo `npm`, não pelo arquivo.**
+**No macOS, use o `launchd`, não o PM2.**
+
+```bash
+bash macos/instalar.sh      # uma vez; sem sudo
+tail -f ~/Library/Logs/wa-agent.log
+launchctl kickstart -k gui/$(id -u)/com.wa-agent   # reiniciar
+```
+
+O PM2 custou uma hora em 31/08 e não entregou. Dois modos de falhar, os
+dois silenciosos:
+
+- `pm2 start src/listener.js` lança o script com o interpretador que o
+  daemon guardou, que pode não ser o Node do sistema. O processo morre antes
+  da primeira linha de log: `status` diz `online`, o contador de reinícios
+  sobe (23, 89, 107) e **os dois logs ficam vazios**.
+- `pm2 startup` manda rodar um comando com `sudo`, e o `.plist` sai
+  pertencendo ao **root** dentro de `~/Library/LaunchAgents`. O launchd
+  recusa LaunchAgent de outro dono **sem dizer nada**: `launchctl load` não
+  reclama, `launchctl list` fica vazio, e depois de reiniciar não sobe nada.
+
+**Nunca instale o agente com `sudo`.** O arquivo tem que pertencer ao
+usuário. O `instalar.sh` recusa rodar como root por isso.
+
+Na VPS (Linux) o PM2 continua valendo — o problema é específico do macOS.
+
+**Se ainda assim for usar PM2: suba pelo `npm`, não pelo arquivo.**
 
 ```bash
 pm2 start npm --name wa-agent -- start     # certo
