@@ -49,6 +49,18 @@ fi
 
 mkdir -p "$HOME/Library/LaunchAgents" "$LOGS"
 
+# --- atalho `meuwa`, de qualquer pasta ---------------------------------------
+# Sem isto o dia a dia exige lembrar do caminho do projeto antes de qualquer
+# comando — que e onde a pessoa desiste.
+ZSHRC="$HOME/.zshrc"
+LINHA="alias meuwa='bash \"$RAIZ/bin/meuwa\"'"
+if ! grep -qF "bin/meuwa" "$ZSHRC" 2>/dev/null; then
+  { echo ""; echo "# WA-AGENT"; echo "$LINHA"; } >> "$ZSHRC"
+  echo "Atalho 'meuwa' adicionado ao $ZSHRC"
+else
+  echo "Atalho 'meuwa' ja estava no $ZSHRC"
+fi
+
 # Se ja existe, descarrega antes de reescrever.
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 
@@ -97,8 +109,17 @@ PLISTEOF
 
 chmod 644 "$PLIST"
 
-# `bootstrap` e a forma atual. `load` e legada e falha em silencio.
-launchctl bootstrap "gui/$(id -u)" "$PLIST"
+# `bootstrap` e a forma atual — `load` e legada e falha em silencio.
+#
+# Mas ele recusa servico ja carregado com "Bootstrap failed: 5: Input/output
+# error", que nao diz nada sobre a causa. O `bootout` acima nem sempre
+# terminou quando chegamos aqui. Entao: tenta, e se falhar, reinicia o que
+# ja existe com `kickstart -k`, que e o efeito desejado de qualquer forma.
+if ! launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null; then
+  echo "Servico ja estava carregado; reiniciando com a configuracao nova."
+  launchctl kickstart -k "gui/$(id -u)/$LABEL" 2>/dev/null \
+    || echo "AVISO: nao consegui reiniciar. Veja $LOGS/wa-agent.err.log"
+fi
 
 echo
 echo "Instalado: $PLIST"
@@ -108,18 +129,6 @@ echo "Conferindo..."
 sleep 3
 launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null | grep -E '^\s+(state|pid) ' || \
   echo "AVISO: nao consegui ler o estado. Veja $LOGS/wa-agent.err.log"
-
-# --- atalho `meuwa`, de qualquer pasta ---------------------------------------
-# Sem isto o dia a dia exige lembrar do caminho do projeto antes de qualquer
-# comando — que e onde a pessoa desiste.
-ZSHRC="$HOME/.zshrc"
-LINHA="alias meuwa='bash \"$RAIZ/bin/meuwa\"'"
-if ! grep -qF "bin/meuwa" "$ZSHRC" 2>/dev/null; then
-  { echo ""; echo "# WA-AGENT"; echo "$LINHA"; } >> "$ZSHRC"
-  echo "Atalho 'meuwa' adicionado ao $ZSHRC"
-else
-  echo "Atalho 'meuwa' ja estava no $ZSHRC"
-fi
 
 echo
 echo "Comandos do dia a dia (abra um terminal novo para o 'meuwa' valer):"
