@@ -99,6 +99,26 @@ export function avisarSeAmbienteVence() {
 // aparece como "coleta vazia", que e muito mais dificil de diagnosticar.
 export function avisarSeAnonKey() {
   if (!config.supabaseKey) return;
+
+  // Formato novo do Supabase: sb_publishable_... (publica, vai no navegador)
+  // e sb_secret_... (privilegiada). O erro e facil de cometer porque a
+  // publishable aparece no topo da pagina e a secret fica escondida abaixo.
+  //
+  // Este caso ANTES caia no catch silencioso la embaixo: nao e JWT, entao
+  // nao havia o que decodificar e o aviso nunca saia. Resultado pratico:
+  // listener rodando, log limpo, e zero linha gravada.
+  if (config.supabaseKey.startsWith('sb_publishable_')) {
+    console.warn(
+      '\nAVISO: esta e a chave PUBLICA do Supabase (sb_publishable_), nao a service_role.\n' +
+      'Com RLS ligado e sem policy publica, ela nao le nem escreve nada — a coleta\n' +
+      'roda sem erro e grava zero.\n' +
+      'Pegue a que comeca com sb_secret_ em Project Settings > API Keys,\n' +
+      'na secao "Secret keys" (fica abaixo da publishable, atras de um botao).\n',
+    );
+    return;
+  }
+  if (config.supabaseKey.startsWith('sb_secret_')) return;
+
   try {
     const [, payload] = config.supabaseKey.split('.');
     if (!payload) return;
@@ -110,6 +130,6 @@ export function avisarSeAnonKey() {
       );
     }
   } catch {
-    // Chave em formato novo (sb_secret_...) nao e JWT. Sem o que validar.
+    // Formato desconhecido. Sem o que validar sem chutar.
   }
 }
