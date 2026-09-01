@@ -26,6 +26,10 @@ export const config = {
   supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
   anthropicKey: process.env.ANTHROPIC_API_KEY ?? '',
   anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
+  // So e necessario quando a chave e "identity-linked" (ligada a uma pessoa
+  // e nao a um workspace). Sem ele, a API devolve HTTP 400 pedindo o
+  // cabecalho `anthropic-workspace-id`. Chave comum nao precisa.
+  anthropicWorkspaceId: process.env.ANTHROPIC_WORKSPACE_ID ?? '',
   // Sobrescrever so faz sentido para teste ou proxy corporativo.
   anthropicBaseUrl: process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com',
   meuJid: process.env.MEU_JID ?? '',

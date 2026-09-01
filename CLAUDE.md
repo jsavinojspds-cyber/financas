@@ -70,7 +70,7 @@ PWA painel                   ── pwa/ (fn_wa_painel, whitelist)
 - **Baileys** `@whiskeysockets/baileys`
 - **Supabase** com `service_role` key (RLS ligado, sem policy pública). Projeto `ycakggiaklceubevkhag`, região us-west-2. **Não** é o `duty-rag` — esse é a base corporativa, separada por LGPD
 - **View precisa de `security_invoker = on`.** Sem isso ela é `SECURITY DEFINER` e fura o RLS das tabelas: a anon key (pública) lê tudo. Verificado e corrigido no `005`
-- **Claude API**: modelo `claude-sonnet-4-6`, endpoint `/v1/messages`
+- **Claude API**: modelo `claude-sonnet-4-6`, endpoint `/v1/messages`. Se a chave for **identity-linked** (ligada a uma pessoa, não a um workspace), a API recusa tudo com HTTP 400 pedindo o cabeçalho `anthropic-workspace-id` — preencha `ANTHROPIC_WORKSPACE_ID` no `.env`. Chave comum ignora o cabeçalho
 - **Embeddings**: a Anthropic **não tem** API de embeddings. A Fase 6 usa fornecedor externo (padrão Voyage AI) e é **opcional** — sem chave, a busca roda só na metade textual
 - **PM2** para processo, `ecosystem.config.cjs`
 - VPS com **IP brasileiro** (Oracle Cloud São Paulo ou Hostinger BR) — IP europeu com número +55 é padrão de fraude

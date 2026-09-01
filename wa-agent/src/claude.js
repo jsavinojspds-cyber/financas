@@ -42,6 +42,34 @@ export function comImagens(texto, imagens = []) {
  * @param {number} [opcoes.maxTokens]
  * @param {number} [opcoes.tentativas]
  */
+/**
+ * Erro da API em portugues, com o que fazer.
+ *
+ * O corpo cru vem em JSON e aparecia truncado na tela, uma vez por conversa
+ * — dez blocos identicos de ingles cortado no meio, sem dizer o que resolve.
+ */
+function explicar(status, corpo) {
+  const texto = String(corpo);
+
+  if (texto.includes('anthropic-workspace-id')) {
+    return 'a chave e "identity-linked" e exige o workspace.\n' +
+      '  Ponha no .env:  ANTHROPIC_WORKSPACE_ID=wrkspc_...\n' +
+      '  O id esta em console.anthropic.com, na URL ao abrir o workspace.\n' +
+      '  Alternativa: criar uma chave comum, de workspace, em vez desta.';
+  }
+  if (status === 401) {
+    return 'chave recusada. Confira ANTHROPIC_API_KEY no .env.';
+  }
+  if (status === 400 && texto.includes('credit')) {
+    return 'sem credito. Adicione fundos em console.anthropic.com/settings/billing.';
+  }
+  if (status === 429) {
+    return 'limite de uso atingido. Ele se recupera sozinho; tente daqui a pouco.';
+  }
+
+  return texto.slice(0, 200);
+}
+
 export async function chamarClaude(prompt, { system, maxTokens = 2000, tentativas = 3 } = {}) {
   let ultimoErro = 'sem tentativa';
 
@@ -53,6 +81,12 @@ export async function chamarClaude(prompt, { system, maxTokens = 2000, tentativa
           'content-type': 'application/json',
           'x-api-key': config.anthropicKey,
           'anthropic-version': VERSAO,
+          // Chave "identity-linked" (ligada a uma pessoa, nao a um
+          // workspace) recusa a requisicao sem este cabecalho, com HTTP 400
+          // pedindo `anthropic-workspace-id`. Chave comum ignora.
+          ...(config.anthropicWorkspaceId
+            ? { 'anthropic-workspace-id': config.anthropicWorkspaceId }
+            : {}),
         },
         body: JSON.stringify({
           model: config.anthropicModel,
@@ -76,7 +110,7 @@ export async function chamarClaude(prompt, { system, maxTokens = 2000, tentativa
       }
 
       const corpo = await resp.text().catch(() => '');
-      ultimoErro = `HTTP ${resp.status} ${corpo.slice(0, 200)}`;
+      ultimoErro = `HTTP ${resp.status} ${explicar(resp.status, corpo)}`;
 
       if (!TENTAR_DE_NOVO.has(resp.status) || n === tentativas) {
         return { ok: false, erro: ultimoErro };
