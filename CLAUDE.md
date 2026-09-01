@@ -90,6 +90,7 @@ financas/
 └── wa-agent/
     ├── README.md          ← passo a passo de instalação
     ├── macos/instalar.sh  ← listener sob launchd, sem PM2 (nunca com sudo)
+    ├── bin/meuwa          ← atalho: analisa + mostra o painel, de qualquer pasta
     ├── provision.sh       ← setup da VPS (idempotente, para e avisa)
     ├── package.json
     ├── .env               ← NUNCA commitar (chmod 600)
@@ -311,6 +312,18 @@ do Homebrew, 31/08.
 Sintoma parecido, causa diferente: **dois processos do listener ao mesmo
 tempo**. Eles brigam pela mesma sessão do WhatsApp e se derrubam. Confira
 com `pgrep -fl listener.js` — tem que voltar uma linha só.
+
+**O dia a dia é um comando só.** O `instalar.sh` cria o atalho `meuwa`:
+
+```bash
+meuwa            # analisa o que chegou e mostra o dia, grupo por grupo
+meuwa fila       # só o que está parado com você
+meuwa ja         # pula a análise, mostra o que já está no banco
+meuwa status     # a coleta está viva?
+```
+
+Funciona de qualquer pasta. Lembrar do caminho do projeto antes de cada
+comando é onde a pessoa desiste — e o Jean já desistiu uma vez por isso.
 
 ```bash
 cd ~/wa-agent

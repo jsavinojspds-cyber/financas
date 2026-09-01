@@ -1,0 +1,52 @@
+#!/bin/bash
+# meuwa — um comando so, de qualquer pasta.
+#
+# Roda a analise do que chegou desde a ultima vez e imprime o painel.
+# Existe porque `cd ~/financas/wa-agent && npm run worker && npm run resumo`
+# nao e algo que alguem digita de manha com o cafe na mao.
+#
+#   meuwa            analisa e mostra o retrato do dia, grupo por grupo
+#   meuwa fila       analisa e mostra so o que esta parado com voce
+#   meuwa ja         pula a analise e mostra o que ja esta no banco
+#   meuwa status     diagnostico da coleta (o listener esta vivo?)
+#
+# Nao envia nada. Imprime. O envio continua sendo manual, por voce
+# (CLAUDE.md secao 2).
+
+set -uo pipefail
+
+RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$RAIZ" || { echo "nao achei $RAIZ"; exit 1; }
+
+acao="${1:-resumo}"
+
+case "$acao" in
+  status)
+    exec npm run --silent status
+    ;;
+  ja|-j)
+    exec npm run --silent resumo
+    ;;
+  fila|digest)
+    saida="digest"
+    ;;
+  resumo|"")
+    saida="resumo"
+    ;;
+  *)
+    echo "uso: meuwa [fila|ja|status]"
+    exit 1
+    ;;
+esac
+
+# A analise pode falhar por chave, credito ou rede. Quando falha, ainda
+# vale mostrar o painel com o que ja estava analisado antes — melhor um
+# retrato desatualizado do que tela nenhuma.
+if ! npm run --silent worker; then
+  echo
+  echo "AVISO: a analise falhou. Mostrando o que ja estava no banco."
+  echo "       Se persistir, confira a chave e o credito da Anthropic."
+  echo
+fi
+
+exec npm run --silent "$saida"

@@ -108,8 +108,24 @@ echo "Conferindo..."
 sleep 3
 launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null | grep -E '^\s+(state|pid) ' || \
   echo "AVISO: nao consegui ler o estado. Veja $LOGS/wa-agent.err.log"
+
+# --- atalho `meuwa`, de qualquer pasta ---------------------------------------
+# Sem isto o dia a dia exige lembrar do caminho do projeto antes de qualquer
+# comando — que e onde a pessoa desiste.
+ZSHRC="$HOME/.zshrc"
+LINHA="alias meuwa='bash \"$RAIZ/bin/meuwa\"'"
+if ! grep -qF "bin/meuwa" "$ZSHRC" 2>/dev/null; then
+  { echo ""; echo "# WA-AGENT"; echo "$LINHA"; } >> "$ZSHRC"
+  echo "Atalho 'meuwa' adicionado ao $ZSHRC"
+else
+  echo "Atalho 'meuwa' ja estava no $ZSHRC"
+fi
+
 echo
-echo "Comandos do dia a dia:"
-echo "  tail -f $LOGS/wa-agent.log            # acompanhar"
+echo "Comandos do dia a dia (abra um terminal novo para o 'meuwa' valer):"
+echo "  meuwa                                 # analisa e mostra o dia"
+echo "  meuwa fila                            # so o que esta parado com voce"
+echo "  meuwa status                          # a coleta esta viva?"
+echo "  tail -f $LOGS/wa-agent.log            # acompanhar o listener"
 echo "  launchctl kickstart -k gui/\$(id -u)/$LABEL   # reiniciar"
 echo "  launchctl bootout gui/\$(id -u)/$LABEL        # parar e desinstalar"
