@@ -1,24 +1,24 @@
 {
-  "gerado_em": "2026-09-17T18:50:14.209Z",
+  "gerado_em": "2026-09-18T15:49:49.274Z",
   "indicadores": [
     {
       "id": "ibov",
       "rotulo": "Ibovespa",
-      "valor": 186341.16,
-      "variacao": -1.023981643286997,
+      "valor": 184793.23,
+      "variacao": -1.2893588380776304,
       "formato": "pontos"
     },
     {
       "id": "ifix",
       "rotulo": "IFIX",
-      "valor": 3742.72,
-      "variacao": 0.004007941067224827,
+      "valor": 3735.8,
+      "variacao": -0.31141009801278247,
       "formato": "pontos"
     },
     {
       "id": "selic",
       "rotulo": "Selic",
-      "valor": 13.89987480014514,
+      "valor": 13.649989315282562,
       "variacao": null,
       "formato": "percent",
       "nota": "a.a."
@@ -26,7 +26,7 @@
     {
       "id": "cdi",
       "rotulo": "CDI",
-      "valor": 13.89987480014514,
+      "valor": 13.649989315282562,
       "variacao": null,
       "formato": "percent",
       "nota": "a.a."
