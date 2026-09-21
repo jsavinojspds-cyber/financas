@@ -1,18 +1,18 @@
 {
-  "gerado_em": "2026-09-21T17:52:54.467Z",
+  "gerado_em": "2026-09-21T19:52:58.045Z",
   "indicadores": [
     {
       "id": "ibov",
       "rotulo": "Ibovespa",
-      "valor": 187003.83,
-      "variacao": 0.8101465760292328,
+      "valor": 187046.61,
+      "variacao": 0.8332084463156457,
       "formato": "pontos"
     },
     {
       "id": "ifix",
       "rotulo": "IFIX",
-      "valor": 3753.15,
-      "variacao": 0.07679447079810545,
+      "valor": 3755.41,
+      "variacao": 0.1370567985771657,
       "formato": "pontos"
     },
     {
@@ -30,10 +30,17 @@
       "variacao": null,
       "formato": "percent",
       "nota": "a.a."
+    },
+    {
+      "id": "ipca",
+      "rotulo": "IPCA",
+      "valor": -0.32,
+      "variacao": null,
+      "formato": "percent",
+      "nota": "no mês"
     }
   ],
   "falhas": [
-    "HTTP 429 em https://economia.awesomeapi.com.br/last/USD-BRL",
-    "Unexpected token '<', \"<?xml vers\"... is not valid JSON"
+    "HTTP 429 em https://economia.awesomeapi.com.br/last/USD-BRL"
   ]
 }
