@@ -1,99 +1,99 @@
 {
-  "gerado_em": "2026-09-29T17:38:23.479Z",
+  "gerado_em": "2026-09-29T19:48:31.918Z",
   "cotacoes": {
-    "LVBI11": {
-      "preco": 96.43,
-      "variacao": -0.7513379991766054,
-      "nome": "FII LVBI VBICI"
-    },
-    "GGRC11": {
-      "preco": 8.92,
-      "variacao": -0.7786429365962212,
-      "nome": "FII GGR ZAG CI"
-    },
-    "BTLG11": {
-      "preco": 99.72,
-      "variacao": 0.49380227753703004,
-      "nome": "FII BTLG    CI  ER"
-    },
     "XPLG11": {
-      "preco": 92.2,
-      "variacao": -0.1732351667388443,
+      "preco": 92.35,
+      "variacao": -0.010827197921183538,
       "nome": "FII XP LOG  CI"
     },
+    "GGRC11": {
+      "preco": 8.93,
+      "variacao": -0.6674082313681924,
+      "nome": "FII GGR ZAG CI"
+    },
+    "LVBI11": {
+      "preco": 96.62,
+      "variacao": -0.5557842733635159,
+      "nome": "FII LVBI VBICI"
+    },
     "HGLG11": {
-      "preco": 147.39,
-      "variacao": -0.33134974303489934,
+      "preco": 147.64,
+      "variacao": -0.16229375169056606,
       "nome": "FII HGLG PAXCI"
     },
+    "VILG11": {
+      "preco": 91.78,
+      "variacao": 0.2950497213419255,
+      "nome": "FII VINCI LGCI"
+    },
+    "BTLG11": {
+      "preco": 99.5,
+      "variacao": 0.2720951325204031,
+      "nome": "FII BTLG    CI  ER"
+    },
+    "XPML11": {
+      "preco": 99.09,
+      "variacao": 1.1019283746556454,
+      "nome": "FII XP MALLSCI  ERS"
+    },
     "HSML11": {
-      "preco": 82.31,
-      "variacao": -1.7780429594272018,
+      "preco": 82.29,
+      "variacao": -1.8019093078758843,
       "nome": "FII HSI MALLCI"
+    },
+    "VISC11": {
+      "preco": 102.95,
+      "variacao": -0.37739500677375704,
+      "nome": "FII VINCI SCCI"
+    },
+    "TRXF11": {
+      "preco": 71.97,
+      "variacao": -1.4109589041095907,
+      "nome": "FII TRX REALCI"
+    },
+    "PVBI11": {
+      "preco": 65.32,
+      "variacao": -1.0003031221582461,
+      "nome": "FII PVBI VBICI"
+    },
+    "RCRB11": {
+      "preco": 133.4,
+      "variacao": 0.3007518796992524,
+      "nome": "FII RIOB RC CI"
+    },
+    "HGRE11": {
+      "preco": 116.44,
+      "variacao": 1.164205039096441,
+      "nome": "FII HGRE PAXCI"
+    },
+    "KNRI11": {
+      "preco": 156.96,
+      "variacao": -0.7838179519595327,
+      "nome": "FII KINEA   CI"
+    },
+    "JSRE11": {
+      "preco": 61.57,
+      "variacao": 2.00463883366468,
+      "nome": "FII JS REAL CI"
     },
     "HGBS11": {
       "preco": 18.6,
       "variacao": 0.9771986970684022,
       "nome": "FII HEDGEBS CI"
     },
-    "VISC11": {
-      "preco": 102.6,
-      "variacao": -0.7160828333655981,
-      "nome": "FII VINCI SCCI"
-    },
-    "TRXF11": {
-      "preco": 72.23,
-      "variacao": -1.0547945205479397,
-      "nome": "FII TRX REALCI"
-    },
-    "VILG11": {
-      "preco": 91.63,
-      "variacao": 0.13113320948529159,
-      "nome": "FII VINCI LGCI"
-    },
-    "XPML11": {
-      "preco": 98.79,
-      "variacao": 0.7958371594735243,
-      "nome": "FII XP MALLSCI  ERS"
-    },
-    "PVBI11": {
-      "preco": 65.11,
-      "variacao": -1.3185813882994915,
-      "nome": "FII PVBI VBICI"
-    },
-    "JSRE11": {
-      "preco": 61.65,
-      "variacao": 2.13717693836978,
-      "nome": "FII JS REAL CI"
-    },
-    "BRCR11": {
-      "preco": 41.15,
-      "variacao": -1.7899761336515514,
-      "nome": "FII BC FUND CI"
-    },
-    "HGRE11": {
-      "preco": 116.05,
-      "variacao": 0.8253692441355369,
-      "nome": "FII HGRE PAXCI"
-    },
-    "KNRI11": {
-      "preco": 156.47,
-      "variacao": -1.0935524652338748,
-      "nome": "FII KINEA   CI"
-    },
-    "RCRB11": {
-      "preco": 133.36,
-      "variacao": 0.27067669172933356,
-      "nome": "FII RIOB RC CI"
-    },
     "MXRF11": {
       "preco": 9.08,
       "variacao": -0.11001100110010767,
       "nome": "FII MAXI RENCI"
     },
+    "KNIP11": {
+      "preco": 89.27,
+      "variacao": -0.5680552461572791,
+      "nome": "FII KINEA IPCI"
+    },
     "KNCR11": {
-      "preco": 105.95,
-      "variacao": -0.9350163627863487,
+      "preco": 106.11,
+      "variacao": -0.7854137447405362,
       "nome": "FII KINEA RICI"
     },
     "IRDM11": {
@@ -101,55 +101,60 @@
       "variacao": 2.183584600147779,
       "nome": "FII IRIDIUM CI  ER"
     },
+    "BRCR11": {
+      "preco": 41.59,
+      "variacao": -0.7398568019092964,
+      "nome": "FII BC FUND CI"
+    },
     "RECR11": {
-      "preco": 73.13,
-      "variacao": -2.2979291917167655,
+      "preco": 73.39,
+      "variacao": -1.9505678022712007,
       "nome": "FII REC RECECI"
     },
-    "KNIP11": {
-      "preco": 89.24,
-      "variacao": -0.60147026063712,
-      "nome": "FII KINEA IPCI"
-    },
-    "CPTS11": {
-      "preco": 7.49,
-      "variacao": 1.3531799729364078,
-      "nome": "FII CAPI SECCI  ER"
-    },
-    "RBRR11": {
-      "preco": 67.65,
-      "variacao": -1.442307692307685,
-      "nome": "FII RBRR PAXCI"
-    },
     "VGIP11": {
-      "preco": 71.46,
-      "variacao": -2.4969300040933446,
+      "preco": 71.72,
+      "variacao": -2.1421749215445587,
       "nome": "FII VALORAIPCI"
     },
+    "RBRR11": {
+      "preco": 67.86,
+      "variacao": -1.136363636363638,
+      "nome": "FII RBRR PAXCI"
+    },
     "HGCR11": {
-      "preco": 93.89,
-      "variacao": -1.5312008390141518,
+      "preco": 94.09,
+      "variacao": -1.3214472994231683,
       "nome": "FII HGCR PAXCI"
     },
-    "KNHY11": {
-      "preco": 94.31,
-      "variacao": 0.08489865223389396,
-      "nome": "FII KINEA HYCI"
-    },
     "DEVA11": {
-      "preco": 17.23,
-      "variacao": 2.1339656194427943,
+      "preco": 17.18,
+      "variacao": 1.8375815056312905,
       "nome": "FII DEVANT  CI"
     },
+    "CPTS11": {
+      "preco": 7.5,
+      "variacao": 1.488497970230045,
+      "nome": "FII CAPI SECCI  ER"
+    },
+    "VGHF11": {
+      "preco": 5.03,
+      "variacao": -0.19841269841269418,
+      "nome": "FII VALOR HECI"
+    },
+    "KNHY11": {
+      "preco": 94.42,
+      "variacao": 0.2016342990555001,
+      "nome": "FII KINEA HYCI"
+    },
     "KNSC11": {
-      "preco": 9.08,
-      "variacao": 0.7769145394006691,
+      "preco": 9.09,
+      "variacao": 0.8879023307436191,
       "nome": "FII KINEA SCCI"
     },
-    "XPSF11": {
-      "preco": 6.35,
-      "variacao": -0.6259780907668238,
-      "nome": "FII XP SELECCI"
+    "HGRU11": {
+      "preco": 114.65,
+      "variacao": -0.11326014985188662,
+      "nome": "FII HGRU PAXCI"
     },
     "HFOF11": {
       "preco": 6.28,
@@ -161,60 +166,55 @@
       "variacao": 0,
       "nome": "FII RBRALPHACI"
     },
-    "VGHF11": {
-      "preco": 5.05,
-      "variacao": 0.19841269841269418,
-      "nome": "FII VALOR HECI"
-    },
-    "RBRP11": {
-      "preco": 50.3,
-      "variacao": 0.27910685805422764,
-      "nome": "FII RBRP PAXCI"
-    },
-    "ALZR11": {
-      "preco": 9.91,
-      "variacao": 0.20222446916076411,
-      "nome": "FII ALIANZA CI  ER"
-    },
-    "VINO11": {
-      "preco": 4.29,
-      "variacao": 0,
-      "nome": "FII VINCI OFCI"
+    "XPSF11": {
+      "preco": 6.35,
+      "variacao": -0.6259780907668238,
+      "nome": "FII XP SELECCI"
     },
     "KFOF11": {
-      "preco": 78.2,
-      "variacao": 0.7083065035415288,
+      "preco": 78.16,
+      "variacao": 0.6567933032839548,
       "nome": "FII KINEAFOFCI"
     },
-    "HGRU11": {
-      "preco": 114.6,
-      "variacao": -0.1568217459487775,
-      "nome": "FII HGRU PAXCI"
+    "ALZR11": {
+      "preco": 9.9,
+      "variacao": 0.10111223458038206,
+      "nome": "FII ALIANZA CI  ER"
     },
-    "TGAR11": {
-      "preco": 43.72,
-      "variacao": -1.4205186020293181,
-      "nome": "FII TG ATIVOCI"
+    "RBRP11": {
+      "preco": 50.44,
+      "variacao": 0.5582137161084553,
+      "nome": "FII RBRP PAXCI"
     },
     "RZTR11": {
-      "preco": 83.21,
-      "variacao": -1.7939336716629413,
+      "preco": 82.96,
+      "variacao": -2.08898855187066,
       "nome": "FII RIZA TX CI"
     },
+    "TGAR11": {
+      "preco": 43.73,
+      "variacao": -1.3979706877113969,
+      "nome": "FII TG ATIVOCI"
+    },
     "MCCI11": {
-      "preco": 93.66,
-      "variacao": -0.5732484076433187,
+      "preco": 93.81,
+      "variacao": -0.41401273885350376,
       "nome": "FII MAUA    CI"
     },
-    "BTCI11": {
-      "preco": 8.44,
-      "variacao": -0.11834319526626967,
-      "nome": "FII BTG CRI CI"
-    },
     "AFHI11": {
-      "preco": 93.99,
-      "variacao": -0.19114367633004864,
+      "preco": 93.9,
+      "variacao": -0.2867155144950579,
       "nome": "FII AFHI CRICI  ER"
+    },
+    "VINO11": {
+      "preco": 4.27,
+      "variacao": -0.46620046620047695,
+      "nome": "FII VINCI OFCI"
+    },
+    "BTCI11": {
+      "preco": 8.5,
+      "variacao": 0.5917159763313694,
+      "nome": "FII BTG CRI CI"
     }
   }
 }
