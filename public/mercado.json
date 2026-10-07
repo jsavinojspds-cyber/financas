@@ -1,18 +1,18 @@
 {
-  "gerado_em": "2026-10-07T18:26:01.014Z",
+  "gerado_em": "2026-10-07T20:25:49.874Z",
   "indicadores": [
     {
       "id": "ibov",
       "rotulo": "Ibovespa",
-      "valor": 205754.7,
-      "variacao": 10.41896533218848,
+      "valor": 204302.33,
+      "variacao": 9.639545991198876,
       "formato": "pontos"
     },
     {
       "id": "ifix",
       "rotulo": "IFIX",
-      "valor": 3946.59,
-      "variacao": 0.9673094929875803,
+      "valor": 3955.32,
+      "variacao": 1.1906528379699026,
       "formato": "pontos"
     },
     {
