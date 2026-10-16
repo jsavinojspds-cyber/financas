@@ -1,19 +1,27 @@
 {
-  "gerado_em": "2026-10-16T16:05:12.742Z",
+  "gerado_em": "2026-10-16T18:39:02.923Z",
   "indicadores": [
     {
       "id": "ibov",
       "rotulo": "Ibovespa",
-      "valor": 204714.02,
-      "variacao": -0.7302783435166378,
+      "valor": 204936.75,
+      "variacao": -0.622272330520803,
       "formato": "pontos"
     },
     {
       "id": "ifix",
       "rotulo": "IFIX",
-      "valor": 3945.64,
-      "variacao": -0.26919159111187735,
+      "valor": 3936.57,
+      "variacao": -0.49844677715738234,
       "formato": "pontos"
+    },
+    {
+      "id": "selic",
+      "rotulo": "Selic",
+      "valor": 13.649989315282562,
+      "variacao": null,
+      "formato": "percent",
+      "nota": "a.a."
     },
     {
       "id": "cdi",
@@ -33,7 +41,6 @@
     }
   ],
   "falhas": [
-    "HTTP 429 em https://economia.awesomeapi.com.br/last/USD-BRL",
-    "HTTP 502 em https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json"
+    "HTTP 429 em https://economia.awesomeapi.com.br/last/USD-BRL"
   ]
 }
