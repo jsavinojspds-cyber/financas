@@ -18,8 +18,7 @@ function ValorReal({ valor, nome, salvar, remover }: { valor?: number; nome: str
   return <input aria-label={`Valor real de ${nome}`} inputMode="decimal" value={foco ? texto : valor === undefined ? '' : String(valor)} placeholder="Em branco" onFocus={() => { setTexto(valor === undefined ? '' : String(valor)); setFoco(true) }} onChange={(e) => setTexto(e.target.value)} onBlur={confirmar} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} className="w-24 rounded-lg bg-fundo px-2 py-2 text-right font-mono text-xs text-tinta shadow-neu-in-sm" />
 }
 
-export function RealCartao({ estado, salvar, remover }: { estado: EstadoApp; salvar: (item: Real) => void; remover: (id: string) => void }) {
-  const [mes, setMes] = useState(estado.planejamento.inicio)
+export function RealCartao({ estado, mes, salvar, remover }: { estado: EstadoApp; mes: string; salvar: (item: Real) => void; remover: (id: string) => void }) {
   const [nomeNovo, setNomeNovo] = useState('')
   const [valorNovo, setValorNovo] = useState('')
   const previstos = estado.planejamento.itens.filter((i) => i.mes === mes && i.conta === 'cartao' && i.tl === 'despesa' && !estado.planejamento.ocultos.includes(`m:${i.id}`))
@@ -34,7 +33,6 @@ export function RealCartao({ estado, salvar, remover }: { estado: EstadoApp; sal
   }
   return <Neu className="space-y-3 p-4">
     <div><h3 className="font-bold text-tinta">Realizado do cartão</h3><p className="mt-1 text-xs text-tinta-3">Preencha o valor efetivo de cada gasto. Células vazias ainda não foram informadas. Estes valores ficam separados das despesas pagas para evitar dupla contagem.</p></div>
-    <label className="block text-xs font-semibold text-tinta-2">Mês <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="ml-2 rounded-lg bg-fundo px-2 py-2 text-tinta" /></label>
     <p className="text-xs font-semibold text-tinta-2">{labelMes(Number(mes.slice(0, 4)), Number(mes.slice(5)) - 1)}</p>
     <div className="space-y-1">{previstos.map((item) => {
       const real = realizados.find((i) => i.planoId === item.id)

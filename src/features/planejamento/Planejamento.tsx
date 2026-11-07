@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Neu } from '@/components/ui'
 import { fmtR, labelMes } from '@/lib/formato'
 import { novoId } from '@/lib/id'
@@ -91,7 +91,7 @@ function CampoNome({ nome, aoSalvar }: { nome: string; aoSalvar: (nome: string) 
   return <input aria-label={`Editar descrição: ${nome}`} title={nome} value={foco ? texto : nome} onFocus={() => { setTexto(nome); setFoco(true) }} onChange={(e) => setTexto(e.target.value)} onBlur={() => { setFoco(false); if (texto.trim() && texto.trim() !== nome) aoSalvar(texto.trim()) }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} className="block w-full min-w-0 truncate rounded-md bg-fundo px-1 py-1.5 text-[11px] font-semibold text-tinta shadow-neu-in-sm" />
 }
 
-export function Planejamento({ estado, aoAjustar, aoAdicionar, aoImportar, aoRenomear, aoOcultar, aoMudarInicio }: {
+export function Planejamento({ estado, aoAjustar, aoAdicionar, aoImportar, aoRenomear, aoOcultar, aoMudarInicio, realCartao }: {
   estado: EstadoApp
   aoAjustar: (chave: string, valor: number | null) => void
   aoAdicionar: (item: ItemPlanejamento) => void
@@ -99,6 +99,7 @@ export function Planejamento({ estado, aoAjustar, aoAdicionar, aoImportar, aoRen
   aoRenomear: (id: string, nome: string) => void
   aoOcultar: (id: string, ocultar: boolean) => void
   aoMudarInicio: (inicio: string) => void
+  realCartao?: (mes: string) => ReactNode
 }) {
   const primeiroMes = estado.planejamento.inicio
   const [nome, setNome] = useState('')
@@ -108,9 +109,10 @@ export function Planejamento({ estado, aoAjustar, aoAdicionar, aoImportar, aoRen
   const [mesNovo, setMesNovo] = useState(primeiroMes)
   const [avisoPacote, setAvisoPacote] = useState('')
   const meses = useMemo(() => Array.from({ length: 13 }, (_, i) => somarMeses(primeiroMes, i)), [primeiroMes])
-  const receitaRef = useRef<HTMLDivElement>(null)
-  const despesaRef = useRef<HTMLDivElement>(null)
-  const resumoRef = useRef<HTMLDivElement>(null)
+  const [mesSelecionado, setMesSelecionado] = useState(primeiroMes)
+  const [visao, setVisao] = useState<1 | 3>(1)
+  const indice = Math.max(0, meses.indexOf(mesSelecionado))
+  const mesesVisiveis = meses.slice(indice, indice + visao)
   const todasLinhas = useMemo(() => linhasDoPlano(estado, meses), [estado, meses])
   const linhas = todasLinhas.filter((l) => !estado.planejamento.ocultos.includes(l.id))
   const ocultas = todasLinhas.filter((l) => estado.planejamento.ocultos.includes(l.id))
@@ -123,11 +125,8 @@ export function Planejamento({ estado, aoAjustar, aoAdicionar, aoImportar, aoRen
   }))
   const soma = totais.reduce((a, t) => ({ receitas: a.receitas + t.receitas, despesas: a.despesas + t.despesas }), { receitas: 0, despesas: 0 })
   const rotuloCurto = (mes: string) => `${mes.slice(5)}/${mes.slice(2, 4)}`
-  const larguraTabela = 128 + meses.length * 92
-  const blocos = [0, 4, 7, 10]
-  function irParaMes(indice: number) {
-    for (const ref of [receitaRef, despesaRef, resumoRef]) ref.current?.scrollTo({ left: indice * 92, behavior: 'smooth' })
-  }
+  const larguraTabela = 128 + mesesVisiveis.length * 92
+  const totaisVisiveis = totais.filter((t) => mesesVisiveis.includes(t.mes))
 
   function adicionar() {
     const numero = Number(valor.replace(',', '.'))
@@ -156,10 +155,10 @@ export function Planejamento({ estado, aoAjustar, aoAdicionar, aoImportar, aoRen
     const titulo = tipoLinha === 'receita' ? 'Receitas' : 'Despesas'
     return <section className="space-y-2">
       <h3 className="font-bold text-tinta">{titulo}</h3>
-      <div ref={tipoLinha === 'receita' ? receitaRef : despesaRef} className="overflow-x-auto overscroll-x-contain">
-        <table style={{ width: larguraTabela }} className="table-fixed border-collapse text-xs">
-          <colgroup><col className="w-[128px]" />{meses.map((mes) => <col key={mes} className="w-[92px]" />)}</colgroup>
-          <thead><tr><th className="sticky left-0 z-10 bg-superficie px-1.5 py-2 text-left">Descrição</th>{meses.map((mes) => <th key={mes} className="px-1 py-2 text-right">{rotuloCurto(mes)}</th>)}</tr></thead>
+      <div className="overflow-x-auto overscroll-x-contain">
+        <table style={{ width: visao === 1 ? '100%' : larguraTabela }} className="table-fixed border-collapse text-xs">
+          <colgroup><col className={visao === 1 ? 'w-[55%]' : 'w-[128px]'} />{mesesVisiveis.map((mes) => <col key={mes} className={visao === 1 ? 'w-[45%]' : 'w-[92px]'} />)}</colgroup>
+          <thead><tr><th className="sticky left-0 z-10 bg-superficie px-1.5 py-2 text-left">Descrição</th>{mesesVisiveis.map((mes) => <th key={mes} className="px-1 py-2 text-right">{rotuloCurto(mes)}</th>)}</tr></thead>
           <tbody>{escolhidas.map((linha) => {
             const nomeExibido = estado.planejamento.nomes[linha.id] || linha.nome
             return <tr key={linha.id} className="border-t border-borda/60">
@@ -169,10 +168,10 @@ export function Planejamento({ estado, aoAjustar, aoAdicionar, aoImportar, aoRen
                   <button type="button" aria-label={`Excluir ${nomeExibido} do planejamento`} title="Excluir do plano" onClick={() => aoOcultar(linha.id, true)} className="flex h-7 w-5 shrink-0 items-center justify-center text-sm text-despesa">×</button>
                 </div>
               </td>
-              {meses.map((mes) => <td key={mes} className="px-0.5 py-1 text-right"><CampoValor titulo={`${nomeExibido} em ${mes}`} valor={valorExibido(linha, mes)} aoSalvar={(v) => aoAjustar(`${linha.id}:${mes}`, v)} /></td>)}
+              {mesesVisiveis.map((mes) => <td key={mes} className="px-0.5 py-1 text-right"><CampoValor titulo={`${nomeExibido} em ${mes}`} valor={valorExibido(linha, mes)} aoSalvar={(v) => aoAjustar(`${linha.id}:${mes}`, v)} /></td>)}
             </tr>
           })}</tbody>
-          <tfoot><tr className="border-t border-borda font-bold"><td className="sticky left-0 bg-superficie px-1.5 py-2">Total {titulo.toLowerCase()}</td>{totais.map((t) => <td key={t.mes} className={`px-1 py-2 text-right ${tipoLinha === 'receita' ? 'text-receita' : 'text-despesa'}`}>{fmtR(tipoLinha === 'receita' ? t.receitas : t.despesas)}</td>)}</tr></tfoot>
+          <tfoot><tr className="border-t border-borda font-bold"><td className="sticky left-0 bg-superficie px-1.5 py-2">Total {titulo.toLowerCase()}</td>{totaisVisiveis.map((t) => <td key={t.mes} className={`px-1 py-2 text-right ${tipoLinha === 'receita' ? 'text-receita' : 'text-despesa'}`}>{fmtR(tipoLinha === 'receita' ? t.receitas : t.despesas)}</td>)}</tr></tfoot>
         </table>
       </div>
       {!escolhidas.length ? <p className="text-xs text-tinta-3">Nenhuma {tipoLinha === 'receita' ? 'receita' : 'despesa'} prevista. Adicione uma abaixo.</p> : null}
@@ -180,12 +179,17 @@ export function Planejamento({ estado, aoAjustar, aoAdicionar, aoImportar, aoRen
   }
 
   return <div className="space-y-4">
-    <div><h2 className="text-xl font-bold text-tinta">Planejamento</h2><p className="mt-1 text-xs text-tinta-3">Edite descrições e valores ou exclua linhas do plano. O histórico original permanece.</p></div>
-    <Neu className="p-4"><label className="text-xs font-semibold text-tinta-2">Primeiro mês <input type="month" value={primeiroMes} onChange={(e) => { if (/^\d{4}-\d{2}$/.test(e.target.value)) { aoMudarInicio(e.target.value); setMesNovo(e.target.value); irParaMes(0) } }} className="ml-2 rounded-lg bg-fundo px-2 py-2 text-tinta" /></label><p className="mt-2 text-xs text-tinta-3">Planejamento de 13 meses. Lançamentos futuros, contas fixas e parcelas identificadas entram como previsão.</p><div className="mt-3 flex flex-wrap gap-1.5">{blocos.map((indice, i) => <button key={indice} type="button" onClick={() => irParaMes(indice)} className="rounded-lg bg-fundo px-2.5 py-1.5 text-[11px] font-semibold text-accent shadow-neu-xs">{rotuloCurto(meses[indice]!)}–{rotuloCurto(meses[blocos[i + 1] ? blocos[i + 1]! - 1 : meses.length - 1]!)}</button>)}</div></Neu>
+    <div><h2 className="text-xl font-bold text-tinta">Planejamento</h2><p className="mt-1 text-xs text-tinta-3">Valores previstos e realizados, mês a mês.</p></div>
+    <Neu className="space-y-3 p-4">
+      <div className="flex items-center justify-between gap-2"><button type="button" aria-label="Mês anterior" disabled={indice === 0} onClick={() => setMesSelecionado(meses[indice - 1]!)} className="rounded-lg bg-fundo px-3 py-2 text-accent disabled:opacity-30">‹</button><select aria-label="Mês do planejamento" value={meses[indice]} onChange={(e) => setMesSelecionado(e.target.value)} className="min-w-0 flex-1 rounded-lg bg-fundo px-2 py-2 text-center text-sm font-bold text-tinta">{meses.map((mes) => <option key={mes} value={mes}>{labelMes(Number(mes.slice(0, 4)), Number(mes.slice(5)) - 1)}</option>)}</select><button type="button" aria-label="Próximo mês" disabled={indice === meses.length - 1} onClick={() => setMesSelecionado(meses[indice + 1]!)} className="rounded-lg bg-fundo px-3 py-2 text-accent disabled:opacity-30">›</button></div>
+      <div className="flex gap-2"><button type="button" onClick={() => setVisao(1)} aria-pressed={visao === 1} className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold ${visao === 1 ? 'bg-accent text-white' : 'bg-fundo text-tinta-2'}`}>Um mês</button><button type="button" onClick={() => setVisao(3)} aria-pressed={visao === 3} className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold ${visao === 3 ? 'bg-accent text-white' : 'bg-fundo text-tinta-2'}`}>Três meses</button></div>
+      <details className="text-xs text-tinta-3"><summary className="cursor-pointer">Alterar período do planejamento</summary><label className="mt-2 block">Primeiro mês <input type="month" value={primeiroMes} onChange={(e) => { if (/^\d{4}-\d{2}$/.test(e.target.value)) { aoMudarInicio(e.target.value); setMesSelecionado(e.target.value); setMesNovo(e.target.value) } }} className="ml-2 rounded-lg bg-fundo px-2 py-2 text-tinta" /></label></details>
+    </Neu>
     <Neu className="space-y-5 p-4">{tabela('receita')}{tabela('despesa')}</Neu>
+    {realCartao?.(meses[indice]!)}
     {ocultas.length ? <Neu className="p-4"><details><summary className="cursor-pointer text-xs font-semibold text-tinta-2">Itens excluídos do plano ({ocultas.length})</summary><div className="mt-3 space-y-2">{ocultas.map((linha) => <div key={linha.id} className="flex items-center justify-between gap-2 border-b border-borda/60 py-1 text-xs"><span className="truncate">{estado.planejamento.nomes[linha.id] || linha.nome}</span><button type="button" onClick={() => aoOcultar(linha.id, false)} className="shrink-0 font-semibold text-accent">Restaurar</button></div>)}</div></details></Neu> : null}
-    <Neu className="space-y-3 p-4"><h3 className="font-bold text-tinta">Adicionar ao plano</h3><div className="grid grid-cols-2 gap-2 sm:grid-cols-5"><select aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value as TipoLancamento)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta"><option value="receita">Receita</option><option value="despesa">Despesa</option></select><select aria-label="Conta" value={conta} onChange={(e) => setConta(e.target.value)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta">{estado.contas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}<option value="cartao">Cartão de crédito</option></select><select aria-label="Mês" value={mesNovo} onChange={(e) => setMesNovo(e.target.value)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta">{meses.map((mes) => <option key={mes} value={mes}>{labelMes(Number(mes.slice(0, 4)), Number(mes.slice(5)) - 1)}</option>)}</select><input aria-label="Descrição" placeholder="Descrição" value={nome} onChange={(e) => setNome(e.target.value)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta" /><input aria-label="Valor" placeholder="Valor" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta" /></div><button type="button" onClick={adicionar} className="rounded-lg bg-accent px-4 py-2 text-xs font-bold text-white">+ Adicionar</button></Neu>
-    <Neu className="space-y-2 p-4"><h3 className="font-bold text-tinta">Importar linhas do plano</h3><label className="block text-xs text-tinta-2">Arquivo preparado (.json)<input type="file" accept=".json,application/json" onChange={(e) => void importarPacote(e)} className="mt-2 block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-2 file:font-bold file:text-white" /></label>{avisoPacote ? <p role="status" className="text-xs text-tinta-2">{avisoPacote}</p> : null}</Neu>
-    <Neu className="space-y-3 p-4"><h3 className="font-bold text-tinta">Resultado mês a mês</h3><div ref={resumoRef} className="overflow-x-auto overscroll-x-contain"><table style={{ width: larguraTabela }} className="table-fixed text-[11px]"><colgroup><col className="w-[128px]" />{meses.map((mes) => <col key={mes} className="w-[92px]" />)}</colgroup><thead><tr><th className="sticky left-0 bg-superficie p-2 text-left"> </th>{totais.map((t) => <th key={t.mes} className="p-1 text-right">{rotuloCurto(t.mes)}</th>)}</tr></thead><tbody><tr><td className="sticky left-0 bg-superficie p-2">Receitas</td>{totais.map((t) => <td key={t.mes} className="p-1 text-right text-receita">{fmtR(t.receitas)}</td>)}</tr><tr><td className="sticky left-0 bg-superficie p-2">Despesas</td>{totais.map((t) => <td key={t.mes} className="p-1 text-right text-despesa">{fmtR(t.despesas)}</td>)}</tr><tr className="border-t border-borda font-bold"><td className="sticky left-0 bg-superficie p-2">Crédito / débito</td>{totais.map((t) => <td key={t.mes} className={`p-1 text-right ${t.receitas >= t.despesas ? 'text-receita' : 'text-despesa'}`}>{fmtR(t.receitas - t.despesas)}</td>)}</tr></tbody></table></div><div className="border-t border-borda pt-3 text-xs"><p>13 meses · Receitas: <strong>{fmtR(soma.receitas)}</strong> · Despesas: <strong>{fmtR(soma.despesas)}</strong></p><p className={`mt-1 font-bold ${soma.receitas >= soma.despesas ? 'text-receita' : 'text-despesa'}`}>Saldo acumulado: {fmtR(soma.receitas - soma.despesas)}</p></div></Neu>
+    <Neu className="space-y-3 p-4"><details><summary className="cursor-pointer text-sm font-bold text-tinta">+ Adicionar ao plano</summary><div className="mt-3"><div className="grid grid-cols-2 gap-2 sm:grid-cols-5"><select aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value as TipoLancamento)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta"><option value="receita">Receita</option><option value="despesa">Despesa</option></select><select aria-label="Conta" value={conta} onChange={(e) => setConta(e.target.value)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta">{estado.contas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}<option value="cartao">Cartão de crédito</option></select><select aria-label="Mês" value={mesNovo} onChange={(e) => setMesNovo(e.target.value)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta">{meses.map((mes) => <option key={mes} value={mes}>{labelMes(Number(mes.slice(0, 4)), Number(mes.slice(5)) - 1)}</option>)}</select><input aria-label="Descrição" placeholder="Descrição" value={nome} onChange={(e) => setNome(e.target.value)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta" /><input aria-label="Valor" placeholder="Valor" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} className="rounded-lg bg-fundo px-2 py-2 text-xs text-tinta" /></div><button type="button" onClick={adicionar} className="rounded-lg bg-accent px-4 py-2 text-xs font-bold text-white">+ Adicionar</button></div></details></Neu>
+    <Neu className="space-y-2 p-4"><details><summary className="cursor-pointer text-sm font-bold text-tinta">Importar linhas do plano</summary><div className="mt-3"><label className="block text-xs text-tinta-2">Arquivo preparado (.json)<input type="file" accept=".json,application/json" onChange={(e) => void importarPacote(e)} className="mt-2 block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-2 file:font-bold file:text-white" /></label>{avisoPacote ? <p role="status" className="text-xs text-tinta-2">{avisoPacote}</p> : null}</div></details></Neu>
+    <Neu className="space-y-3 p-4"><h3 className="font-bold text-tinta">Resultado mês a mês</h3><div className="overflow-x-auto overscroll-x-contain"><table style={{ width: visao === 1 ? '100%' : larguraTabela }} className="table-fixed text-[11px]"><colgroup><col className={visao === 1 ? 'w-[55%]' : 'w-[128px]'} />{mesesVisiveis.map((mes) => <col key={mes} className={visao === 1 ? 'w-[45%]' : 'w-[92px]'} />)}</colgroup><thead><tr><th className="sticky left-0 bg-superficie p-2 text-left"> </th>{totaisVisiveis.map((t) => <th key={t.mes} className="p-1 text-right">{rotuloCurto(t.mes)}</th>)}</tr></thead><tbody><tr><td className="sticky left-0 bg-superficie p-2">Receitas</td>{totaisVisiveis.map((t) => <td key={t.mes} className="p-1 text-right text-receita">{fmtR(t.receitas)}</td>)}</tr><tr><td className="sticky left-0 bg-superficie p-2">Despesas</td>{totaisVisiveis.map((t) => <td key={t.mes} className="p-1 text-right text-despesa">{fmtR(t.despesas)}</td>)}</tr><tr className="border-t border-borda font-bold"><td className="sticky left-0 bg-superficie p-2">Crédito / débito</td>{totaisVisiveis.map((t) => <td key={t.mes} className={`p-1 text-right ${t.receitas >= t.despesas ? 'text-receita' : 'text-despesa'}`}>{fmtR(t.receitas - t.despesas)}</td>)}</tr></tbody></table></div><div className="border-t border-borda pt-3 text-xs"><p>13 meses · Receitas: <strong>{fmtR(soma.receitas)}</strong> · Despesas: <strong>{fmtR(soma.despesas)}</strong></p><p className={`mt-1 font-bold ${soma.receitas >= soma.despesas ? 'text-receita' : 'text-despesa'}`}>Saldo acumulado: {fmtR(soma.receitas - soma.despesas)}</p></div></Neu>
   </div>
 }
