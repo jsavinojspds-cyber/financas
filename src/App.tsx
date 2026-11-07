@@ -48,17 +48,14 @@ export type Aba =
 
 const ABAS: { k: Aba; l: string }[] = [
   { k: 'hoje', l: '☀️ Hoje' },
+  { k: 'planejamento', l: '🗓️ Planejamento' },
   { k: 'resumo', l: 'Resumo' },
   { k: 'receitas', l: 'Receitas' },
   { k: 'despesas', l: 'Despesas' },
   { k: 'fluxo', l: '📊 Fluxo' },
   { k: 'analise', l: '🥧 Análise' },
   { k: 'anual', l: '📅 Anual' },
-  { k: 'fixos', l: '🔁 Fixos' },
-  { k: 'carteira', l: '💼 Carteira' },
   { k: 'cartao', l: '💳 Cartão' },
-  { k: 'planejamento', l: '🗓️ Planejamento' },
-  { k: 'sms', l: '📋 SMS' },
 ]
 
 /** Abas em que o botão "+ Novo" não faz sentido. */
