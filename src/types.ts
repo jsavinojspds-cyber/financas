@@ -85,6 +85,22 @@ export interface Posicao {
   updatedAt: number
 }
 
+export interface GastoCartao {
+  id: string
+  data: string
+  descricao: string
+  valor: number
+}
+
+export interface FaturaCartao {
+  id: string
+  cartao: string
+  mes: string
+  arquivo: string
+  gastos: GastoCartao[]
+  criadaEm: number
+}
+
 export interface ConfigApp {
   /** id da conta selecionada, ou 'todas' */
   contaAtiva: string
@@ -106,6 +122,7 @@ export interface EstadoApp {
   recorrencias: Recorrencia[]
   /** carteira de fundos, só para acompanhamento */
   carteira: Posicao[]
+  faturasCartao: FaturaCartao[]
   config: ConfigApp
   updatedAt: number
 }
@@ -183,6 +200,7 @@ export function estadoVazio(): EstadoApp {
     contas: CONTAS_PADRAO.map((c) => ({ ...c })),
     recorrencias: [],
     carteira: [],
+    faturasCartao: [],
     config: {
       contaAtiva: 'todas',
       notificacoes: false,

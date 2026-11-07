@@ -176,6 +176,7 @@ export function normalizarEstado(bruto: unknown): EstadoApp | null {
     recorrencias: Array.isArray(e.recorrencias) ? e.recorrencias : [],
     // Estado gravado antes da carteira existir não tem o campo.
     carteira: Array.isArray(e.carteira) ? e.carteira : [],
+    faturasCartao: Array.isArray(e.faturasCartao) ? e.faturasCartao : [],
     config: { ...base.config, ...(e.config ?? {}) },
     updatedAt: Number(e.updatedAt) || Date.now(),
   }

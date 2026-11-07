@@ -4,6 +4,7 @@ import { TelaPin } from '@/features/pin/TelaPin'
 import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
 import { PainelManha } from '@/features/agente/PainelManha'
 import { Carteira } from '@/features/carteira/Carteira'
+import { CartaoCredito } from '@/features/cartao/CartaoCredito'
 import { Confirmar, Toast, type DadosToast } from '@/components/ui'
 import { AvisoAtualizacao } from '@/components/BotaoAtualizar'
 import { IndicadorGravacao } from '@/components/IndicadorGravacao'
@@ -39,6 +40,7 @@ export type Aba =
   | 'anual'
   | 'fixos'
   | 'carteira'
+  | 'cartao'
   | 'sms'
 
 const ABAS: { k: Aba; l: string }[] = [
@@ -51,11 +53,12 @@ const ABAS: { k: Aba; l: string }[] = [
   { k: 'anual', l: '📅 Anual' },
   { k: 'fixos', l: '🔁 Fixos' },
   { k: 'carteira', l: '💼 Carteira' },
+  { k: 'cartao', l: '💳 Cartão' },
   { k: 'sms', l: '📋 SMS' },
 ]
 
 /** Abas em que o botão "+ Novo" não faz sentido. */
-const SEM_NOVO: Aba[] = ['hoje', 'fluxo', 'analise', 'anual', 'fixos', 'carteira', 'sms']
+const SEM_NOVO: Aba[] = ['hoje', 'fluxo', 'analise', 'anual', 'fixos', 'carteira', 'cartao', 'sms']
 
 export default function App() {
   return (
@@ -341,6 +344,8 @@ function Shell({ aoSair }: { aoSair: () => void }) {
         ) : null}
 
         {aba === 'carteira' ? <Carteira /> : null}
+
+        {aba === 'cartao' ? <CartaoCredito faturas={estado.faturasCartao} mes={k} aoSalvar={(fatura) => dispatch({ t: 'fatura-salvar', fatura })} aoRemover={(id) => dispatch({ t: 'fatura-remover', id })} /> : null}
 
         {aba === 'sms' ? (
           <ColarSMS

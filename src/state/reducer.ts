@@ -3,6 +3,7 @@ import {
   type Conta,
   type ConfigApp,
   type EstadoApp,
+  type FaturaCartao,
   type Lancamento,
   type Posicao,
   type Recorrencia,
@@ -24,6 +25,8 @@ export type Acao =
   | { t: 'recorrencia-remover'; id: string; apagarFuturos: boolean; aPartirDe: string }
   | { t: 'materializar'; ateMes: string }
   | { t: 'carteira'; posicoes: Posicao[] }
+  | { t: 'fatura-salvar'; fatura: FaturaCartao }
+  | { t: 'fatura-remover'; id: string }
   | { t: 'config'; patch: Partial<ConfigApp> }
   | { t: 'substituir'; estado: EstadoApp }
 
@@ -166,6 +169,12 @@ export function reducer(estado: EstadoApp, acao: Acao): EstadoApp {
 
     case 'carteira':
       return tocar({ ...estado, carteira: acao.posicoes })
+
+    case 'fatura-salvar':
+      return tocar({ ...estado, faturasCartao: [...estado.faturasCartao, acao.fatura] })
+
+    case 'fatura-remover':
+      return tocar({ ...estado, faturasCartao: estado.faturasCartao.filter((f) => f.id !== acao.id) })
 
     case 'config':
       return tocar({ ...estado, config: { ...estado.config, ...acao.patch } })
