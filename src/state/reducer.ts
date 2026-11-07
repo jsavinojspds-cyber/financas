@@ -33,6 +33,8 @@ export type Acao =
   | { t: 'planejamento-ajuste'; chave: string; valor: number | null }
   | { t: 'planejamento-item'; item: ItemPlanejamento }
   | { t: 'planejamento-remover'; id: string }
+  | { t: 'planejamento-nome'; id: string; nome: string }
+  | { t: 'planejamento-ocultar'; id: string; ocultar: boolean }
   | { t: 'config'; patch: Partial<ConfigApp> }
   | { t: 'substituir'; estado: EstadoApp }
 
@@ -204,6 +206,21 @@ export function reducer(estado: EstadoApp, acao: Acao): EstadoApp {
 
     case 'planejamento-remover':
       return tocar({ ...estado, planejamento: { ...estado.planejamento, itens: estado.planejamento.itens.filter((i) => i.id !== acao.id) } })
+
+    case 'planejamento-nome': {
+      const nomes = { ...estado.planejamento.nomes }
+      const nome = acao.nome.trim()
+      if (nome) nomes[acao.id] = nome
+      else delete nomes[acao.id]
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, nomes } })
+    }
+
+    case 'planejamento-ocultar': {
+      const ocultos = acao.ocultar
+        ? [...new Set([...estado.planejamento.ocultos, acao.id])]
+        : estado.planejamento.ocultos.filter((id) => id !== acao.id)
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, ocultos } })
+    }
 
     case 'config':
       return tocar({ ...estado, config: { ...estado.config, ...acao.patch } })

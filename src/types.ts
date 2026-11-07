@@ -115,6 +115,8 @@ export interface ItemPlanejamento {
 export interface Planejamento {
   ajustes: Record<string, number>
   itens: ItemPlanejamento[]
+  nomes: Record<string, string>
+  ocultos: string[]
 }
 
 export interface ConfigApp {
@@ -218,7 +220,7 @@ export function estadoVazio(): EstadoApp {
     recorrencias: [],
     carteira: [],
     faturasCartao: [],
-    planejamento: { ajustes: {}, itens: [] },
+    planejamento: { ajustes: {}, itens: [], nomes: {}, ocultos: [] },
     config: {
       contaAtiva: 'todas',
       notificacoes: false,

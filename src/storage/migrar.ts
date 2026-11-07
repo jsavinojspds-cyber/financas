@@ -180,6 +180,8 @@ export function normalizarEstado(bruto: unknown): EstadoApp | null {
     planejamento: {
       ajustes: e.planejamento && typeof e.planejamento === 'object' && e.planejamento.ajustes && typeof e.planejamento.ajustes === 'object' ? e.planejamento.ajustes : {},
       itens: Array.isArray(e.planejamento?.itens) ? e.planejamento.itens : [],
+      nomes: e.planejamento && typeof e.planejamento === 'object' && e.planejamento.nomes && typeof e.planejamento.nomes === 'object' ? e.planejamento.nomes : {},
+      ocultos: Array.isArray(e.planejamento?.ocultos) ? e.planejamento.ocultos : [],
     },
     config: { ...base.config, ...(e.config ?? {}) },
     updatedAt: Number(e.updatedAt) || Date.now(),

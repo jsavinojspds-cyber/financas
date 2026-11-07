@@ -351,7 +351,7 @@ function Shell({ aoSair }: { aoSair: () => void }) {
 
         {aba === 'cartao' ? <CartaoCredito faturas={estado.faturasCartao} mes={k} aoSalvar={(fatura) => dispatch({ t: 'fatura-salvar', fatura })} aoImportar={(faturas) => dispatch({ t: 'faturas-importar', faturas })} aoRemover={(id) => dispatch({ t: 'fatura-remover', id })} aoCategoria={(faturaId, gastoId, categoria) => dispatch({ t: 'fatura-categoria', faturaId, gastoId, categoria })} /> : null}
 
-        {aba === 'planejamento' ? <Planejamento estado={estado} inicio={somarMeses(chave(agora.getFullYear(), agora.getMonth()), 1)} aoAjustar={(chaveAjuste, valor) => dispatch({ t: 'planejamento-ajuste', chave: chaveAjuste, valor })} aoAdicionar={(item) => dispatch({ t: 'planejamento-item', item })} aoRemover={(id) => dispatch({ t: 'planejamento-remover', id })} /> : null}
+        {aba === 'planejamento' ? <Planejamento estado={estado} inicio={somarMeses(chave(agora.getFullYear(), agora.getMonth()), 1)} aoAjustar={(chaveAjuste, valor) => dispatch({ t: 'planejamento-ajuste', chave: chaveAjuste, valor })} aoAdicionar={(item) => dispatch({ t: 'planejamento-item', item })} aoRenomear={(id, nome) => dispatch({ t: 'planejamento-nome', id, nome })} aoOcultar={(id, ocultar) => dispatch({ t: 'planejamento-ocultar', id, ocultar })} /> : null}
 
         {aba === 'sms' ? (
           <ColarSMS
