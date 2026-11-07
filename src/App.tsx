@@ -345,7 +345,7 @@ function Shell({ aoSair }: { aoSair: () => void }) {
 
         {aba === 'carteira' ? <Carteira /> : null}
 
-        {aba === 'cartao' ? <CartaoCredito faturas={estado.faturasCartao} mes={k} aoSalvar={(fatura) => dispatch({ t: 'fatura-salvar', fatura })} aoRemover={(id) => dispatch({ t: 'fatura-remover', id })} aoCategoria={(faturaId, gastoId, categoria) => dispatch({ t: 'fatura-categoria', faturaId, gastoId, categoria })} /> : null}
+        {aba === 'cartao' ? <CartaoCredito faturas={estado.faturasCartao} mes={k} aoSalvar={(fatura) => dispatch({ t: 'fatura-salvar', fatura })} aoImportar={(faturas) => dispatch({ t: 'faturas-importar', faturas })} aoRemover={(id) => dispatch({ t: 'fatura-remover', id })} aoCategoria={(faturaId, gastoId, categoria) => dispatch({ t: 'fatura-categoria', faturaId, gastoId, categoria })} /> : null}
 
         {aba === 'sms' ? (
           <ColarSMS

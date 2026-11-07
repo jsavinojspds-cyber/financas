@@ -26,6 +26,7 @@ export type Acao =
   | { t: 'materializar'; ateMes: string }
   | { t: 'carteira'; posicoes: Posicao[] }
   | { t: 'fatura-salvar'; fatura: FaturaCartao }
+  | { t: 'faturas-importar'; faturas: FaturaCartao[] }
   | { t: 'fatura-remover'; id: string }
   | { t: 'fatura-categoria'; faturaId: string; gastoId: string; categoria: string }
   | { t: 'config'; patch: Partial<ConfigApp> }
@@ -173,6 +174,13 @@ export function reducer(estado: EstadoApp, acao: Acao): EstadoApp {
 
     case 'fatura-salvar':
       return tocar({ ...estado, faturasCartao: [...estado.faturasCartao.filter((f) => f.id !== acao.fatura.id), acao.fatura] })
+
+    case 'faturas-importar': {
+      const novas = acao.faturas.filter((f) => !estado.faturasCartao.some((atual) =>
+        (f.arquivoHash && atual.arquivoHash === f.arquivoHash) ||
+        (atual.mes === f.mes && atual.cartao.toLowerCase() === f.cartao.toLowerCase())))
+      return novas.length ? tocar({ ...estado, faturasCartao: [...estado.faturasCartao, ...novas] }) : estado
+    }
 
     case 'fatura-remover':
       return tocar({ ...estado, faturasCartao: estado.faturasCartao.filter((f) => f.id !== acao.id) })

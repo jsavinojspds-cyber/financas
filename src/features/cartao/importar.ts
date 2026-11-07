@@ -77,13 +77,16 @@ export function importarPdfItau(paginas: PaginaPdf[], mesFatura: string): { gast
   let totalInformado: number | null = null
   for (const pagina of paginas) {
     const items = pagina.items.filter((i) => i.str.trim())
-    for (const [xMin, xMax, valorMin] of [[150, 360, 310], [370, 570, 515]]) {
+    const datasPrimeiraColuna = items.filter((i) => /^\d{2}\/\d{2}$/.test(i.str.trim()) && i.transform[4]! >= 125 && i.transform[4]! < 160)
+    const deslocamento = datasPrimeiraColuna.length ? Math.round(datasPrimeiraColuna[0]!.transform[4]! - 151) : 0
+    for (const [xMin, xMax, valorMin] of [[150, 360, 310], [365, 570, 515]].map((c) => c.map((x) => x + deslocamento))) {
       const coluna = items.filter((i) => i.transform[4]! >= xMin && i.transform[4]! < xMax)
-      const titulo = coluna.find((i) => /Lançamentos: compras e saques/i.test(i.str))
-      if (!titulo) continue
-      const corte = coluna.find((i) => /Compras parceladas - próximas faturas|Total dos lançamentos atuais/i.test(i.str))
-      const topo = titulo.transform[5]!
-      const base = corte ? corte.transform[5]! : -Infinity
+      const ys = [...new Set(coluna.map((i) => i.transform[5]!))]
+      const linhaEm = (y: number) => coluna.filter((i) => Math.abs(i.transform[5]! - y) < 2).sort((a, b) => a.transform[4]! - b.transform[4]!).map((i) => i.str).join('').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      const topo = ys.find((y) => /lancamentos: compras e saques/.test(linhaEm(y)))
+      if (topo === undefined) continue
+      const cortes = ys.filter((y) => y < topo && /compras parceladas - proximas faturas|total dos lancamentos atuais/.test(linhaEm(y)))
+      const base = cortes.length ? Math.max(...cortes) : -Infinity
       for (const item of coluna) {
         const x = item.transform[4]!, y = item.transform[5]!
         if (x > xMin + 8 || y >= topo || y <= base || !/^\d{2}\/\d{2}$/.test(item.str.trim())) continue
@@ -97,9 +100,9 @@ export function importarPdfItau(paginas: PaginaPdf[], mesFatura: string): { gast
         const categoria = /ALIMENTACAO/.test(categoriaBanco) ? 'Alimentação' : /SAUDE/.test(categoriaBanco) ? 'Saúde' : /EDUCACAO/.test(categoriaBanco) ? 'Educação' : /VESTUARIO/.test(categoriaBanco) ? 'Compras' : sugerirCategoria(descricao)
         if (descricao && Number.isFinite(quantia) && quantia !== 0) gastos.push({ data, descricao, valor: quantia, categoria })
       }
-      const total = coluna.find((i) => /Total dos lançamentos atuais/i.test(i.str))
-      if (total) {
-        const numero = coluna.find((i) => Math.abs(i.transform[5]! - total.transform[5]!) < 3 && i.transform[4]! >= valorMin - 12 && /^[\d.]+,\d{2}$/.test(i.str.trim()))
+      const totalY = ys.find((y) => /total dos lancamentos atuais/.test(linhaEm(y)))
+      if (totalY !== undefined) {
+        const numero = coluna.find((i) => Math.abs(i.transform[5]! - totalY) < 3 && i.transform[4]! >= valorMin - 12 && /^[\d.]+,\d{2}$/.test(i.str.trim()))
         if (numero) totalInformado = valor(numero.str)
       }
     }

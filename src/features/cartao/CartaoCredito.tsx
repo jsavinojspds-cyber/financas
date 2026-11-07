@@ -12,10 +12,11 @@ function rotuloMes(mes: string): string {
 
 function total(f: FaturaCartao): number { return f.gastos.reduce((s, g) => s + g.valor, 0) }
 
-export function CartaoCredito({ faturas, mes, aoSalvar, aoRemover, aoCategoria }: {
+export function CartaoCredito({ faturas, mes, aoSalvar, aoImportar, aoRemover, aoCategoria }: {
   faturas: FaturaCartao[]
   mes: string
   aoSalvar: (f: FaturaCartao) => void
+  aoImportar: (f: FaturaCartao[]) => void
   aoRemover: (id: string) => void
   aoCategoria: (faturaId: string, gastoId: string, categoria: string) => void
 }) {
@@ -82,6 +83,22 @@ export function CartaoCredito({ faturas, mes, aoSalvar, aoRemover, aoCategoria }
     finally { setCarregando(false); e.target.value = '' }
   }
 
+  async function importarPacote(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const pacote: unknown = JSON.parse(await file.text())
+      if (!pacote || typeof pacote !== 'object' || !('formato' in pacote) || pacote.formato !== 'financas-faturas-v1' || !('faturas' in pacote) || !Array.isArray(pacote.faturas)) throw new Error('Arquivo de faturas inválido.')
+      const faturasNovas: FaturaCartao[] = pacote.faturas
+      if (!faturasNovas.length || !faturasNovas.every((f) => f && typeof f.id === 'string' && typeof f.cartao === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(f.mes) && typeof f.arquivo === 'string' && Array.isArray(f.gastos) && f.gastos.length > 0 && f.gastos.every((g) => typeof g.id === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(g.data) && typeof g.descricao === 'string' && Number.isFinite(g.valor)) && Number.isFinite(f.criadaEm))) throw new Error('O pacote contém faturas incompletas.')
+      const novas = faturasNovas.filter((f) => !faturas.some((atual) => (f.arquivoHash && atual.arquivoHash === f.arquivoHash) || (atual.mes === f.mes && atual.cartao.toLowerCase() === f.cartao.toLowerCase())))
+      aoImportar(novas)
+      setAviso(novas.length ? `${novas.length} faturas adicionadas ao histórico. ${faturasNovas.length - novas.length} já existentes foram ignoradas.` : 'Todas as faturas deste pacote já estão arquivadas.')
+      setFiltroMes('todos')
+    } catch (erro) { setAviso(erro instanceof Error ? erro.message : 'Não consegui importar o pacote.') }
+    finally { e.target.value = '' }
+  }
+
   function salvar() {
     if (!cartao.trim() || !gastos.length || !/^\d{4}-(0[1-9]|1[0-2])$/.test(mesFatura)) return
     const existente = faturas.find((f) => f.mes === mesFatura && f.cartao.toLowerCase() === cartao.trim().toLowerCase())
@@ -97,6 +114,7 @@ export function CartaoCredito({ faturas, mes, aoSalvar, aoRemover, aoCategoria }
     <div><h2 className="text-xl font-bold text-tinta">💳 Cartão de crédito</h2><p className="mt-1 text-xs text-tinta-3">Arquive faturas e acompanhe onde o dinheiro está indo.</p></div>
     <Neu className="space-y-3 p-4">
       <h3 className="font-bold text-tinta">Importar fatura</h3>
+      <label className="block text-xs font-semibold text-tinta-2">Pacote de faturas preparado (.json)<input type="file" accept=".json,application/json" onChange={(e) => void importarPacote(e)} className="mt-1 block w-full text-xs text-tinta-2 file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-2 file:font-bold file:text-white" /></label>
       <label className="block text-xs font-semibold text-tinta-2">PDF, CSV ou TXT<input type="file" accept=".pdf,.csv,.txt,application/pdf,text/csv,text/plain" onChange={(e) => void lerArquivo(e)} className="mt-1 block w-full text-xs text-tinta-2 file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-2 file:font-bold file:text-white" /></label>
       {carregando ? <p className="text-xs text-tinta-3">Lendo fatura…</p> : null}
       {aviso ? <p role="status" className="text-xs text-tinta-2">{aviso}</p> : null}
