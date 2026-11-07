@@ -122,6 +122,7 @@ export interface Planejamento {
   ocultos: string[]
   revisao: number
   bases: Record<string, { receitas: number; despesas: number; revisao: number }>
+  realCartao: { id: string; mes: string; nome: string; valor: number; planoId?: string }[]
 }
 
 export interface ConfigApp {
@@ -225,7 +226,7 @@ export function estadoVazio(): EstadoApp {
     recorrencias: [],
     carteira: [],
     faturasCartao: [],
-    planejamento: { inicio: '2026-12', ajustes: {}, itens: [], nomes: {}, ocultos: [], revisao: 0, bases: {} },
+    planejamento: { inicio: '2026-12', ajustes: {}, itens: [], nomes: {}, ocultos: [], revisao: 0, bases: {}, realCartao: [] },
     config: {
       contaAtiva: 'todas',
       notificacoes: false,

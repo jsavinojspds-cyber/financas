@@ -38,6 +38,8 @@ export type Acao =
   | { t: 'planejamento-ocultar'; id: string; ocultar: boolean }
   | { t: 'planejamento-inicio'; inicio: string }
   | { t: 'planejamento-bases'; bases: EstadoApp['planejamento']['bases'] }
+  | { t: 'cartao-real-salvar'; item: EstadoApp['planejamento']['realCartao'][number] }
+  | { t: 'cartao-real-remover'; id: string }
   | { t: 'config'; patch: Partial<ConfigApp> }
   | { t: 'substituir'; estado: EstadoApp }
 
@@ -238,6 +240,12 @@ export function reducer(estado: EstadoApp, acao: Acao): EstadoApp {
 
     case 'planejamento-bases':
       return tocar({ ...estado, planejamento: { ...estado.planejamento, bases: { ...estado.planejamento.bases, ...acao.bases } } })
+
+    case 'cartao-real-salvar':
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, realCartao: [...estado.planejamento.realCartao.filter((i) => i.id !== acao.item.id && (!acao.item.planoId || i.planoId !== acao.item.planoId)), acao.item] } })
+
+    case 'cartao-real-remover':
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, realCartao: estado.planejamento.realCartao.filter((i) => i.id !== acao.id) } })
 
     case 'config':
       return tocar({ ...estado, config: { ...estado.config, ...acao.patch } })

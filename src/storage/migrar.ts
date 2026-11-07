@@ -185,6 +185,7 @@ export function normalizarEstado(bruto: unknown): EstadoApp | null {
       ocultos: Array.isArray(e.planejamento?.ocultos) ? e.planejamento.ocultos : [],
       revisao: Number.isInteger(e.planejamento?.revisao) ? e.planejamento!.revisao : 0,
       bases: e.planejamento && typeof e.planejamento === 'object' && e.planejamento.bases && typeof e.planejamento.bases === 'object' ? e.planejamento.bases : {},
+      realCartao: Array.isArray(e.planejamento?.realCartao) ? e.planejamento.realCartao.filter((i) => i && typeof i.id === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(i.mes) && typeof i.nome === 'string' && Number.isFinite(i.valor) && i.valor >= 0) : [],
     },
     config: { ...base.config, ...(e.config ?? {}) },
     updatedAt: Number(e.updatedAt) || Date.now(),

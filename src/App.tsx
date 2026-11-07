@@ -6,6 +6,7 @@ import { PainelManha } from '@/features/agente/PainelManha'
 import { Carteira } from '@/features/carteira/Carteira'
 import { CartaoCredito } from '@/features/cartao/CartaoCredito'
 import { Planejamento, calcularBasesPlanejamento } from '@/features/planejamento/Planejamento'
+import { RealCartao } from '@/features/planejamento/RealCartao'
 import { somarMeses } from '@/lib/recorrencia'
 import { Confirmar, Toast, type DadosToast } from '@/components/ui'
 import { AvisoAtualizacao } from '@/components/BotaoAtualizar'
@@ -359,7 +360,7 @@ function Shell({ aoSair }: { aoSair: () => void }) {
 
         {aba === 'cartao' ? <CartaoCredito faturas={estado.faturasCartao} mes={k} aoSalvar={(fatura) => dispatch({ t: 'fatura-salvar', fatura })} aoImportar={(faturas) => dispatch({ t: 'faturas-importar', faturas })} aoRemover={(id) => dispatch({ t: 'fatura-remover', id })} aoCategoria={(faturaId, gastoId, categoria) => dispatch({ t: 'fatura-categoria', faturaId, gastoId, categoria })} /> : null}
 
-        {aba === 'planejamento' ? <Planejamento estado={estado} aoAjustar={(chaveAjuste, valor) => dispatch({ t: 'planejamento-ajuste', chave: chaveAjuste, valor })} aoAdicionar={(item) => dispatch({ t: 'planejamento-item', item })} aoImportar={(itens) => dispatch({ t: 'planejamento-importar', itens })} aoRenomear={(id, nome) => dispatch({ t: 'planejamento-nome', id, nome })} aoOcultar={(id, ocultar) => dispatch({ t: 'planejamento-ocultar', id, ocultar })} aoMudarInicio={(inicio) => dispatch({ t: 'planejamento-inicio', inicio })} /> : null}
+        {aba === 'planejamento' ? <><Planejamento estado={estado} aoAjustar={(chaveAjuste, valor) => dispatch({ t: 'planejamento-ajuste', chave: chaveAjuste, valor })} aoAdicionar={(item) => dispatch({ t: 'planejamento-item', item })} aoImportar={(itens) => dispatch({ t: 'planejamento-importar', itens })} aoRenomear={(id, nome) => dispatch({ t: 'planejamento-nome', id, nome })} aoOcultar={(id, ocultar) => dispatch({ t: 'planejamento-ocultar', id, ocultar })} aoMudarInicio={(inicio) => dispatch({ t: 'planejamento-inicio', inicio })} /><RealCartao estado={estado} salvar={(item) => dispatch({ t: 'cartao-real-salvar', item })} remover={(id) => dispatch({ t: 'cartao-real-remover', id })} /></> : null}
 
         {aba === 'sms' ? (
           <ColarSMS
