@@ -73,7 +73,7 @@ function CampoValor({ valor, aoSalvar, titulo }: { valor?: number; aoSalvar: (va
 function CampoNome({ nome, aoSalvar }: { nome: string; aoSalvar: (nome: string) => void }) {
   const [texto, setTexto] = useState(nome)
   const [foco, setFoco] = useState(false)
-  return <input aria-label={`Editar descrição: ${nome}`} title={nome} value={foco ? texto : nome} onFocus={() => { setTexto(nome); setFoco(true) }} onChange={(e) => setTexto(e.target.value)} onBlur={() => { setFoco(false); if (texto.trim() && texto.trim() !== nome) aoSalvar(texto.trim()) }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} className="block w-full min-w-0 truncate rounded-md bg-fundo px-1 py-1 text-[11px] font-semibold text-tinta shadow-neu-in-sm" />
+  return <input aria-label={`Editar descrição: ${nome}`} title={nome} value={foco ? texto : nome} onFocus={() => { setTexto(nome); setFoco(true) }} onChange={(e) => setTexto(e.target.value)} onBlur={() => { setFoco(false); if (texto.trim() && texto.trim() !== nome) aoSalvar(texto.trim()) }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} className="block w-full min-w-0 truncate rounded-md bg-fundo px-1 py-1.5 text-[11px] font-semibold text-tinta shadow-neu-in-sm" />
 }
 
 export function Planejamento({ estado, inicio, aoAjustar, aoAdicionar, aoRenomear, aoOcultar }: {
@@ -94,7 +94,6 @@ export function Planejamento({ estado, inicio, aoAjustar, aoAdicionar, aoRenomea
   const todasLinhas = useMemo(() => linhasDoPlano(estado, meses), [estado, meses])
   const linhas = todasLinhas.filter((l) => !estado.planejamento.ocultos.includes(l.id))
   const ocultas = todasLinhas.filter((l) => estado.planejamento.ocultos.includes(l.id))
-  const contaNome = (id: string) => id === 'cartao' ? 'Cartão de crédito' : estado.contas.find((c) => c.id === id)?.nome ?? 'Outra conta'
   const valorExibido = (linha: Linha, mes: string) => estado.planejamento.ajustes[`${linha.id}:${mes}`] ?? linha.valores[mes]
   const valorDa = (linha: Linha, mes: string) => valorExibido(linha, mes) ?? 0
   const totais = meses.map((mes) => ({
@@ -125,8 +124,10 @@ export function Planejamento({ estado, inicio, aoAjustar, aoAdicionar, aoRenomea
             const nomeExibido = estado.planejamento.nomes[linha.id] || linha.nome
             return <tr key={linha.id} className="border-t border-borda/60">
               <td className="sticky left-0 z-10 bg-superficie px-1 py-1">
-                <CampoNome nome={nomeExibido} aoSalvar={(nome) => aoRenomear(linha.id, nome)} />
-                <div className="flex items-center justify-between gap-1 px-1 text-[10px] text-tinta-3"><span className="truncate">{contaNome(linha.conta)}</span><button type="button" aria-label={`Excluir ${nomeExibido} do planejamento`} title="Excluir do plano" onClick={() => aoOcultar(linha.id, true)} className="shrink-0 px-1 text-despesa">×</button></div>
+                <div className="flex items-center gap-0.5">
+                  <CampoNome nome={nomeExibido} aoSalvar={(nome) => aoRenomear(linha.id, nome)} />
+                  <button type="button" aria-label={`Excluir ${nomeExibido} do planejamento`} title="Excluir do plano" onClick={() => aoOcultar(linha.id, true)} className="flex h-7 w-5 shrink-0 items-center justify-center text-sm text-despesa">×</button>
+                </div>
               </td>
               {meses.map((mes) => <td key={mes} className="px-0.5 py-1 text-right"><CampoValor titulo={`${nomeExibido} em ${mes}`} valor={valorExibido(linha, mes)} aoSalvar={(v) => aoAjustar(`${linha.id}:${mes}`, v)} /></td>)}
             </tr>
