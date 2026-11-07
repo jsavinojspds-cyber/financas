@@ -27,6 +27,7 @@ export type Acao =
   | { t: 'carteira'; posicoes: Posicao[] }
   | { t: 'fatura-salvar'; fatura: FaturaCartao }
   | { t: 'fatura-remover'; id: string }
+  | { t: 'fatura-categoria'; faturaId: string; gastoId: string; categoria: string }
   | { t: 'config'; patch: Partial<ConfigApp> }
   | { t: 'substituir'; estado: EstadoApp }
 
@@ -171,10 +172,13 @@ export function reducer(estado: EstadoApp, acao: Acao): EstadoApp {
       return tocar({ ...estado, carteira: acao.posicoes })
 
     case 'fatura-salvar':
-      return tocar({ ...estado, faturasCartao: [...estado.faturasCartao, acao.fatura] })
+      return tocar({ ...estado, faturasCartao: [...estado.faturasCartao.filter((f) => f.id !== acao.fatura.id), acao.fatura] })
 
     case 'fatura-remover':
       return tocar({ ...estado, faturasCartao: estado.faturasCartao.filter((f) => f.id !== acao.id) })
+
+    case 'fatura-categoria':
+      return tocar({ ...estado, faturasCartao: estado.faturasCartao.map((f) => f.id === acao.faturaId ? { ...f, gastos: f.gastos.map((g) => g.id === acao.gastoId ? { ...g, categoria: acao.categoria } : g) } : f) })
 
     case 'config':
       return tocar({ ...estado, config: { ...estado.config, ...acao.patch } })

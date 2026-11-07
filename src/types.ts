@@ -90,6 +90,7 @@ export interface GastoCartao {
   data: string
   descricao: string
   valor: number
+  categoria?: string
 }
 
 export interface FaturaCartao {
@@ -97,6 +98,7 @@ export interface FaturaCartao {
   cartao: string
   mes: string
   arquivo: string
+  arquivoHash?: string
   gastos: GastoCartao[]
   criadaEm: number
 }

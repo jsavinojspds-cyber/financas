@@ -1,5 +1,6 @@
 import type { GastoCartao } from '@/types'
 import { novoId } from '@/lib/id'
+import { sugerirCategoria } from './categorias'
 
 export type GastoImportado = Omit<GastoCartao, 'id'>
 
@@ -57,7 +58,7 @@ export function importarTexto(texto: string, mesFatura: string): { gastos: Gasto
       const m = linha.match(/^(\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)\s+(.+?)\s+(?:R\$\s*)?(-?[\d.,]+)$/)
       if (m) { data = dataIso(m[1]!, mesFatura); descricao = m[2]!.trim(); quantia = valor(m[3]!) }
     }
-    if (data && descricao && Number.isFinite(quantia) && quantia > 0) gastos.push({ data, descricao, valor: quantia })
+    if (data && descricao && Number.isFinite(quantia) && quantia > 0) gastos.push({ data, descricao, valor: quantia, categoria: sugerirCategoria(descricao) })
     else ignoradas++
   }
   return { gastos, ignoradas }
@@ -92,7 +93,9 @@ export function importarPdfItau(paginas: PaginaPdf[], mesFatura: string): { gast
         const quantiaItem = linha.find((outro) => outro.transform[4]! >= valorMin && /^-?\s*[\d.]+,\d{2}$/.test(outro.str.trim()))
         const descricao = linha.filter((outro) => outro.transform[4]! >= xMin + 20 && outro.transform[4]! < valorMin && !/^\d{2}\/\d{2}$/.test(outro.str.trim())).map((outro) => outro.str.trim()).filter(Boolean).join(' ').trim()
         const quantia = quantiaItem ? valor(quantiaItem.str) : NaN
-        if (descricao && Number.isFinite(quantia) && quantia !== 0) gastos.push({ data, descricao, valor: quantia })
+        const categoriaBanco = coluna.filter((outro) => Math.abs(outro.transform[5]! - (y - 9)) <= 2.5 && outro.transform[4]! >= xMin + 20 && outro.transform[4]! < valorMin).map((outro) => outro.str).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+        const categoria = /ALIMENTACAO/.test(categoriaBanco) ? 'Alimentação' : /SAUDE/.test(categoriaBanco) ? 'Saúde' : /EDUCACAO/.test(categoriaBanco) ? 'Educação' : /VESTUARIO/.test(categoriaBanco) ? 'Compras' : sugerirCategoria(descricao)
+        if (descricao && Number.isFinite(quantia) && quantia !== 0) gastos.push({ data, descricao, valor: quantia, categoria })
       }
       const total = coluna.find((i) => /Total dos lançamentos atuais/i.test(i.str))
       if (total) {
@@ -108,4 +111,10 @@ export function detectarMesFaturaItau(paginas: PaginaPdf[]): string | null {
   const texto = paginas[0]?.items.map((i) => i.str).join(' ') ?? ''
   const m = texto.match(/Vencimento:\s*\d{2}\/(\d{2})\/(\d{4})/i)
   return m ? `${m[2]}-${m[1]}` : null
+}
+
+export function identificarCartaoItau(paginas: PaginaPdf[]): string | null {
+  const item = paginas[0]?.items.find((i) => /\d{4}[. ]X{4}[. ]X{4}[. ]\d{4}/i.test(i.str))
+  const m = item?.str.match(/\d{4}[. ]X{4}[. ]X{4}[. ](\d{4})\s*([A-Z ]{3,30})?/i)
+  return m ? `Itaú ${(m[2] ?? 'Cartão').trim()} • ${m[1]}` : null
 }
