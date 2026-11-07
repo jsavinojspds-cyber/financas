@@ -3,7 +3,7 @@ import { Botao, Neu } from '@/components/ui'
 import { fmtR } from '@/lib/formato'
 import { novoId } from '@/lib/id'
 import type { FaturaCartao } from '@/types'
-import { comIds, importarTexto, type GastoImportado } from './importar'
+import { comIds, importarTexto, importarPdfItau, detectarMesFaturaItau, type GastoImportado } from './importar'
 
 export function CartaoCredito({ faturas, mes, aoSalvar, aoRemover }: { faturas: FaturaCartao[]; mes: string; aoSalvar: (f: FaturaCartao) => void; aoRemover: (id: string) => void }) {
   const [cartao, setCartao] = useState('')
@@ -19,31 +19,29 @@ export function CartaoCredito({ faturas, mes, aoSalvar, aoRemover }: { faturas: 
     if (!file) return
     setArquivo(file.name); setGastos([]); setAviso(''); setCarregando(true)
     try {
-      let texto: string
+      let texto: string | null = null
       if (file.name.toLowerCase().endsWith('.pdf')) {
         const pdfjs = await import('pdfjs-dist')
         pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
         const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
-        const paginas: string[] = []
+        const paginas = []
         for (let p = 1; p <= pdf.numPages; p++) {
           const conteudo = await (await pdf.getPage(p)).getTextContent()
-          let anteriorY: number | null = null; let linhas = ''
-          for (const item of conteudo.items) {
-            if (!('str' in item)) continue
-            const y = item.transform[5] ?? 0
-            if (anteriorY !== null && Math.abs(y - anteriorY) > 3) linhas += '\n'
-            else if (linhas && !linhas.endsWith('\n')) linhas += ' '
-            linhas += item.str
-            anteriorY = y
-          }
-          paginas.push(linhas)
+          paginas.push({ items: conteudo.items.filter((i): i is typeof i & { str: string; transform: number[] } => 'str' in i) })
         }
-        texto = paginas.join('\n')
+        const mesDetectado = detectarMesFaturaItau(paginas) ?? mesFatura
+        setMesFatura(mesDetectado)
+        const resultado = importarPdfItau(paginas, mesDetectado)
+        setGastos(resultado.gastos)
+        const soma = resultado.gastos.reduce((s, g) => s + g.valor, 0)
+        setAviso(resultado.gastos.length ? `${resultado.gastos.length} lançamento(s) encontrado(s). Soma: ${fmtR(soma)}.${resultado.totalInformado !== null ? ` Total informado na fatura: ${fmtR(resultado.totalInformado)}.` : ''} Confira antes de salvar.` : 'Não encontrei gastos nesse PDF. Envie uma fatura de exemplo para ajustarmos a leitura.')
       } else if (/\.(csv|txt)$/i.test(file.name)) texto = await file.text()
       else throw new Error('Selecione uma fatura em PDF, CSV ou TXT.')
-      const resultado = importarTexto(texto, mesFatura)
-      setGastos(resultado.gastos)
-      setAviso(resultado.gastos.length ? `${resultado.gastos.length} gasto(s) encontrado(s). ${resultado.ignoradas} linha(s) ignorada(s). Confira os valores antes de salvar.` : 'Não encontrei gastos nesse formato. Envie uma fatura de exemplo para ajustarmos a leitura.')
+      if (texto !== null) {
+        const resultado = importarTexto(texto, mesFatura)
+        setGastos(resultado.gastos)
+        setAviso(resultado.gastos.length ? `${resultado.gastos.length} gasto(s) encontrado(s). ${resultado.ignoradas} linha(s) ignorada(s). Confira os valores antes de salvar.` : 'Não encontrei gastos nesse formato. Envie uma fatura de exemplo para ajustarmos a leitura.')
+      }
     } catch (erro) { setAviso(erro instanceof Error ? erro.message : 'Não consegui ler a fatura.') }
     finally { setCarregando(false); e.target.value = '' }
   }
