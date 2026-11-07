@@ -103,6 +103,20 @@ export interface FaturaCartao {
   criadaEm: number
 }
 
+export interface ItemPlanejamento {
+  id: string
+  mes: string
+  nome: string
+  tl: TipoLancamento
+  conta: string
+  valor: number
+}
+
+export interface Planejamento {
+  ajustes: Record<string, number>
+  itens: ItemPlanejamento[]
+}
+
 export interface ConfigApp {
   /** id da conta selecionada, ou 'todas' */
   contaAtiva: string
@@ -125,6 +139,7 @@ export interface EstadoApp {
   /** carteira de fundos, só para acompanhamento */
   carteira: Posicao[]
   faturasCartao: FaturaCartao[]
+  planejamento: Planejamento
   config: ConfigApp
   updatedAt: number
 }
@@ -203,6 +218,7 @@ export function estadoVazio(): EstadoApp {
     recorrencias: [],
     carteira: [],
     faturasCartao: [],
+    planejamento: { ajustes: {}, itens: [] },
     config: {
       contaAtiva: 'todas',
       notificacoes: false,

@@ -5,6 +5,7 @@ import {
   type EstadoApp,
   type FaturaCartao,
   type Lancamento,
+  type ItemPlanejamento,
   type Posicao,
   type Recorrencia,
 } from '@/types'
@@ -29,6 +30,9 @@ export type Acao =
   | { t: 'faturas-importar'; faturas: FaturaCartao[] }
   | { t: 'fatura-remover'; id: string }
   | { t: 'fatura-categoria'; faturaId: string; gastoId: string; categoria: string }
+  | { t: 'planejamento-ajuste'; chave: string; valor: number | null }
+  | { t: 'planejamento-item'; item: ItemPlanejamento }
+  | { t: 'planejamento-remover'; id: string }
   | { t: 'config'; patch: Partial<ConfigApp> }
   | { t: 'substituir'; estado: EstadoApp }
 
@@ -187,6 +191,19 @@ export function reducer(estado: EstadoApp, acao: Acao): EstadoApp {
 
     case 'fatura-categoria':
       return tocar({ ...estado, faturasCartao: estado.faturasCartao.map((f) => f.id === acao.faturaId ? { ...f, gastos: f.gastos.map((g) => g.id === acao.gastoId ? { ...g, categoria: acao.categoria } : g) } : f) })
+
+    case 'planejamento-ajuste': {
+      const ajustes = { ...estado.planejamento.ajustes }
+      if (acao.valor === null) delete ajustes[acao.chave]
+      else ajustes[acao.chave] = acao.valor
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, ajustes } })
+    }
+
+    case 'planejamento-item':
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, itens: [...estado.planejamento.itens.filter((i) => i.id !== acao.item.id), acao.item] } })
+
+    case 'planejamento-remover':
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, itens: estado.planejamento.itens.filter((i) => i.id !== acao.id) } })
 
     case 'config':
       return tocar({ ...estado, config: { ...estado.config, ...acao.patch } })

@@ -5,6 +5,8 @@ import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
 import { PainelManha } from '@/features/agente/PainelManha'
 import { Carteira } from '@/features/carteira/Carteira'
 import { CartaoCredito } from '@/features/cartao/CartaoCredito'
+import { Planejamento } from '@/features/planejamento/Planejamento'
+import { somarMeses } from '@/lib/recorrencia'
 import { Confirmar, Toast, type DadosToast } from '@/components/ui'
 import { AvisoAtualizacao } from '@/components/BotaoAtualizar'
 import { IndicadorGravacao } from '@/components/IndicadorGravacao'
@@ -41,6 +43,7 @@ export type Aba =
   | 'fixos'
   | 'carteira'
   | 'cartao'
+  | 'planejamento'
   | 'sms'
 
 const ABAS: { k: Aba; l: string }[] = [
@@ -54,11 +57,12 @@ const ABAS: { k: Aba; l: string }[] = [
   { k: 'fixos', l: '🔁 Fixos' },
   { k: 'carteira', l: '💼 Carteira' },
   { k: 'cartao', l: '💳 Cartão' },
+  { k: 'planejamento', l: '🗓️ Planejamento' },
   { k: 'sms', l: '📋 SMS' },
 ]
 
 /** Abas em que o botão "+ Novo" não faz sentido. */
-const SEM_NOVO: Aba[] = ['hoje', 'fluxo', 'analise', 'anual', 'fixos', 'carteira', 'cartao', 'sms']
+const SEM_NOVO: Aba[] = ['hoje', 'fluxo', 'analise', 'anual', 'fixos', 'carteira', 'cartao', 'planejamento', 'sms']
 
 export default function App() {
   return (
@@ -346,6 +350,8 @@ function Shell({ aoSair }: { aoSair: () => void }) {
         {aba === 'carteira' ? <Carteira /> : null}
 
         {aba === 'cartao' ? <CartaoCredito faturas={estado.faturasCartao} mes={k} aoSalvar={(fatura) => dispatch({ t: 'fatura-salvar', fatura })} aoImportar={(faturas) => dispatch({ t: 'faturas-importar', faturas })} aoRemover={(id) => dispatch({ t: 'fatura-remover', id })} aoCategoria={(faturaId, gastoId, categoria) => dispatch({ t: 'fatura-categoria', faturaId, gastoId, categoria })} /> : null}
+
+        {aba === 'planejamento' ? <Planejamento estado={estado} inicio={somarMeses(chave(agora.getFullYear(), agora.getMonth()), 1)} aoAjustar={(chaveAjuste, valor) => dispatch({ t: 'planejamento-ajuste', chave: chaveAjuste, valor })} aoAdicionar={(item) => dispatch({ t: 'planejamento-item', item })} aoRemover={(id) => dispatch({ t: 'planejamento-remover', id })} /> : null}
 
         {aba === 'sms' ? (
           <ColarSMS
