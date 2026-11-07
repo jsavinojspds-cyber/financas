@@ -66,7 +66,7 @@ function CampoValor({ valor, aoSalvar, titulo }: { valor: number; aoSalvar: (val
     if (Number.isFinite(n) && n >= 0) aoSalvar(Math.round(n * 100) / 100)
     else setTexto(String(valor))
   }
-  return <input aria-label={titulo} type="text" inputMode="decimal" value={exibir} onFocus={() => { setTexto(String(valor)); setFoco(true) }} onChange={(e) => setTexto(e.target.value)} onBlur={salvar} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} className="w-24 rounded-lg bg-fundo px-2 py-2 text-right font-mono text-xs text-tinta shadow-neu-in-sm" />
+  return <input aria-label={titulo} type="text" inputMode="decimal" value={exibir} onFocus={() => { setTexto(String(valor)); setFoco(true) }} onChange={(e) => setTexto(e.target.value)} onBlur={salvar} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} className="w-[76px] rounded-lg bg-fundo px-1.5 py-1.5 text-right font-mono text-[11px] text-tinta shadow-neu-in-sm" />
 }
 
 export function Planejamento({ estado, inicio, aoAjustar, aoAdicionar, aoRemover }: {
@@ -92,6 +92,7 @@ export function Planejamento({ estado, inicio, aoAjustar, aoAdicionar, aoRemover
     despesas: linhas.filter((l) => l.tl === 'despesa').reduce((s, l) => s + valorDa(l, mes), 0),
   }))
   const soma = totais.reduce((a, t) => ({ receitas: a.receitas + t.receitas, despesas: a.despesas + t.despesas }), { receitas: 0, despesas: 0 })
+  const rotuloCurto = (mes: string) => `${mes.slice(5)}/${mes.slice(2, 4)}`
 
   function adicionar() {
     const numero = Number(valor.replace(',', '.'))
@@ -102,8 +103,10 @@ export function Planejamento({ estado, inicio, aoAjustar, aoAdicionar, aoRemover
 
   const tabela = (tipoLinha: TipoLancamento) => {
     const escolhidas = linhas.filter((l) => l.tl === tipoLinha)
-    return <section className="space-y-2"><h3 className="font-bold text-tinta">{tipoLinha === 'receita' ? 'Receitas' : 'Despesas'}</h3>
-      {escolhidas.length ? <div className="overflow-x-auto"><table className="min-w-[650px] w-full border-collapse text-xs"><thead><tr><th className="sticky left-0 z-10 min-w-48 bg-superficie p-2 text-left">Conta / descrição</th>{meses.map((mes) => <th key={mes} className="p-2 text-right">{labelMes(Number(mes.slice(0, 4)), Number(mes.slice(5)) - 1)}</th>)}</tr></thead><tbody>{escolhidas.map((linha) => <tr key={linha.id} className="border-t border-borda/60"><td className="sticky left-0 bg-superficie p-2"><span className="block font-semibold text-tinta">{linha.nome}</span><span className="text-[10px] text-tinta-3">{contaNome(linha.conta)} · {linha.origem}</span>{linha.origem === 'manual' ? <button type="button" onClick={() => aoRemover(linha.id.slice(2))} className="ml-2 text-[10px] text-despesa">Excluir</button> : null}</td>{meses.map((mes) => <td key={mes} className="p-1 text-right">{linha.valores[mes] !== undefined || estado.planejamento.ajustes[`${linha.id}:${mes}`] !== undefined ? <CampoValor titulo={`${linha.nome} em ${mes}`} valor={valorDa(linha, mes)} aoSalvar={(v) => aoAjustar(`${linha.id}:${mes}`, v)} /> : <span className="text-tinta-3">—</span>}</td>)}</tr>)}</tbody></table></div> : <p className="text-xs text-tinta-3">Nenhuma {tipoLinha === 'receita' ? 'receita' : 'despesa'} prevista. Adicione uma abaixo.</p>}
+    const titulo = tipoLinha === 'receita' ? 'Receitas' : 'Despesas'
+    return <section className="space-y-2"><h3 className="font-bold text-tinta">{titulo}</h3>
+      <div className="overflow-x-auto overscroll-x-contain"><table className="w-full min-w-[460px] table-fixed border-collapse text-xs"><colgroup><col className="w-[128px]" />{meses.map((mes) => <col key={mes} />)}</colgroup><thead><tr><th className="sticky left-0 z-10 bg-superficie px-1.5 py-2 text-left">Descrição</th>{meses.map((mes) => <th key={mes} className="px-1 py-2 text-right">{rotuloCurto(mes)}</th>)}</tr></thead><tbody>{escolhidas.map((linha) => <tr key={linha.id} className="border-t border-borda/60"><td className="sticky left-0 z-10 bg-superficie px-1.5 py-1.5"><span title={linha.nome} className="block truncate font-semibold text-tinta">{linha.nome}</span><span className="block truncate text-[10px] text-tinta-3">{contaNome(linha.conta)}{linha.origem === 'manual' ? <button type="button" onClick={() => aoRemover(linha.id.slice(2))} className="ml-1 text-despesa">Excluir</button> : null}</span></td>{meses.map((mes) => <td key={mes} className="px-0.5 py-1 text-right">{linha.valores[mes] !== undefined || estado.planejamento.ajustes[`${linha.id}:${mes}`] !== undefined ? <CampoValor titulo={`${linha.nome} em ${mes}`} valor={valorDa(linha, mes)} aoSalvar={(v) => aoAjustar(`${linha.id}:${mes}`, v)} /> : <span className="pr-2 text-tinta-3">—</span>}</td>)}</tr>)}</tbody><tfoot><tr className="border-t border-borda font-bold"><td className="sticky left-0 bg-superficie px-1.5 py-2">Total {titulo.toLowerCase()}</td>{totais.map((t) => <td key={t.mes} className={`px-1 py-2 text-right ${tipoLinha === 'receita' ? 'text-receita' : 'text-despesa'}`}>{fmtR(tipoLinha === 'receita' ? t.receitas : t.despesas)}</td>)}</tr></tfoot></table></div>
+      {!escolhidas.length ? <p className="text-xs text-tinta-3">Nenhuma {tipoLinha === 'receita' ? 'receita' : 'despesa'} prevista. Adicione uma abaixo.</p> : null}
     </section>
   }
 
