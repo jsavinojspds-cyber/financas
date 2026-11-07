@@ -5,12 +5,14 @@ import { novoId } from '@/lib/id'
 import { statusDe, totais } from '@/state/seletores'
 import type { EstadoApp, Lancamento } from '@/types'
 import type { Aba } from '@/App'
+import { ComparativoPlano } from '@/features/planejamento/ComparativoPlano'
 
 export function Resumo({
   lista,
   ano,
   mes,
   estado,
+  planejado,
   aoIrParaAba,
   aoCopiarMes,
 }: {
@@ -18,6 +20,7 @@ export function Resumo({
   ano: number
   mes: number
   estado: EstadoApp
+  planejado: EstadoApp['planejamento']['bases'][string] | null
   aoIrParaAba: (a: Aba) => void
   aoCopiarMes: (itens: Lancamento[], destino: string, qtd: number) => void
 }) {
@@ -62,11 +65,10 @@ export function Resumo({
 
   if (!lista.length) {
     return (
-      <Vazio
-        icone="📭"
-        titulo="Nenhum lançamento neste mês"
-        dica="Toque em + Novo para começar"
-      />
+      <div className="flex flex-col gap-3">
+        <ComparativoPlano planejado={planejado} recebido={0} pago={0} />
+        <Vazio icone="📭" titulo="Nenhum lançamento neste mês" dica="Toque em + Novo para começar" />
+      </div>
     )
   }
 
@@ -89,6 +91,8 @@ export function Resumo({
         <CartaoTotal label="Receitas" total={t.receitas} label2="Recebido" parcial={t.recebido} cor="#10b981" />
         <CartaoTotal label="Despesas" total={t.despesas} label2="Pago" parcial={t.pago} cor="#ef4444" />
       </div>
+
+      <ComparativoPlano planejado={planejado} recebido={t.recebido} pago={t.pago} />
 
       {/* progresso de pagamento */}
       <Neu className="p-4" sombra="neu-xs">

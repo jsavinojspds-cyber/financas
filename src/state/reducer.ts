@@ -32,9 +32,12 @@ export type Acao =
   | { t: 'fatura-categoria'; faturaId: string; gastoId: string; categoria: string }
   | { t: 'planejamento-ajuste'; chave: string; valor: number | null }
   | { t: 'planejamento-item'; item: ItemPlanejamento }
+  | { t: 'planejamento-importar'; itens: ItemPlanejamento[] }
   | { t: 'planejamento-remover'; id: string }
   | { t: 'planejamento-nome'; id: string; nome: string }
   | { t: 'planejamento-ocultar'; id: string; ocultar: boolean }
+  | { t: 'planejamento-inicio'; inicio: string }
+  | { t: 'planejamento-bases'; bases: EstadoApp['planejamento']['bases'] }
   | { t: 'config'; patch: Partial<ConfigApp> }
   | { t: 'substituir'; estado: EstadoApp }
 
@@ -196,16 +199,24 @@ export function reducer(estado: EstadoApp, acao: Acao): EstadoApp {
 
     case 'planejamento-ajuste': {
       const ajustes = { ...estado.planejamento.ajustes }
+      if (acao.valor === null && !(acao.chave in ajustes)) return estado
+      if (acao.valor !== null && ajustes[acao.chave] === acao.valor) return estado
       if (acao.valor === null) delete ajustes[acao.chave]
       else ajustes[acao.chave] = acao.valor
-      return tocar({ ...estado, planejamento: { ...estado.planejamento, ajustes } })
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, ajustes, revisao: estado.planejamento.revisao + 1 } })
     }
 
     case 'planejamento-item':
-      return tocar({ ...estado, planejamento: { ...estado.planejamento, itens: [...estado.planejamento.itens.filter((i) => i.id !== acao.item.id), acao.item] } })
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, itens: [...estado.planejamento.itens.filter((i) => i.id !== acao.item.id), acao.item], revisao: estado.planejamento.revisao + 1 } })
+
+    case 'planejamento-importar': {
+      const existentes = new Set(estado.planejamento.itens.map((i) => i.id))
+      const novos = acao.itens.filter((i) => !existentes.has(i.id) && !estado.planejamento.itens.some((atual) => atual.mes === i.mes && atual.nome === i.nome && atual.valor === i.valor && atual.conta === i.conta && atual.tl === i.tl))
+      return novos.length ? tocar({ ...estado, planejamento: { ...estado.planejamento, itens: [...estado.planejamento.itens, ...novos], revisao: estado.planejamento.revisao + 1 } }) : estado
+    }
 
     case 'planejamento-remover':
-      return tocar({ ...estado, planejamento: { ...estado.planejamento, itens: estado.planejamento.itens.filter((i) => i.id !== acao.id) } })
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, itens: estado.planejamento.itens.filter((i) => i.id !== acao.id), revisao: estado.planejamento.revisao + 1 } })
 
     case 'planejamento-nome': {
       const nomes = { ...estado.planejamento.nomes }
@@ -219,8 +230,14 @@ export function reducer(estado: EstadoApp, acao: Acao): EstadoApp {
       const ocultos = acao.ocultar
         ? [...new Set([...estado.planejamento.ocultos, acao.id])]
         : estado.planejamento.ocultos.filter((id) => id !== acao.id)
-      return tocar({ ...estado, planejamento: { ...estado.planejamento, ocultos } })
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, ocultos, revisao: estado.planejamento.revisao + 1 } })
     }
+
+    case 'planejamento-inicio':
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, inicio: acao.inicio } })
+
+    case 'planejamento-bases':
+      return tocar({ ...estado, planejamento: { ...estado.planejamento, bases: { ...estado.planejamento.bases, ...acao.bases } } })
 
     case 'config':
       return tocar({ ...estado, config: { ...estado.config, ...acao.patch } })

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Campo, Neu, Vazio, cx } from '@/components/ui'
 import { fmtR } from '@/lib/formato'
 import { statusDe, totais } from '@/state/seletores'
-import type { Conta, Lancamento, TipoLancamento } from '@/types'
+import type { Conta, EstadoApp, Lancamento, TipoLancamento } from '@/types'
 import { ItemLancamento } from './ItemLancamento'
 
 const FILTROS = [
@@ -16,6 +16,7 @@ const FILTROS = [
 export function ListaLancamentos({
   lista,
   tipo,
+  planejado,
   contas,
   mostrarConta,
   filtro,
@@ -28,6 +29,7 @@ export function ListaLancamentos({
 }: {
   lista: Lancamento[]
   tipo: TipoLancamento
+  planejado: EstadoApp['planejamento']['bases'][string] | null
   contas: Conta[]
   mostrarConta: boolean
   filtro: string
@@ -56,6 +58,8 @@ export function ListaLancamentos({
   const ehReceita = tipo === 'receita'
   const total = ehReceita ? t.receitas : t.despesas
   const parcial = ehReceita ? t.recebido : t.pago
+  const valorPlano = planejado ? (ehReceita ? planejado.receitas : planejado.despesas) : null
+  const desvio = valorPlano === null ? null : parcial - valorPlano
 
   // Contagem por filtro para o usuário saber onde há algo antes de tocar.
   const contagens = useMemo(() => {
@@ -82,6 +86,7 @@ export function ListaLancamentos({
         <div className="mt-0.5 text-[11px] text-tinta-3">
           {ehReceita ? 'Recebido' : 'Pago'}: {fmtR(parcial)}
         </div>
+        {valorPlano !== null && desvio !== null ? <div className="mt-3 border-t border-borda/60 pt-2 text-[11px]"><span>Plano: <strong>{fmtR(valorPlano)}</strong></span><span className="mx-2 text-tinta-3">·</span><span className={(ehReceita ? desvio >= 0 : desvio <= 0) ? 'text-receita' : 'text-despesa'}>Desvio até agora: <strong>{desvio > 0 ? '+' : ''}{fmtR(desvio)}</strong></span></div> : null}
       </Neu>
 
       <Campo

@@ -5,7 +5,7 @@ import { PrimeiraAbertura } from '@/features/primeira-abertura/PrimeiraAbertura'
 import { PainelManha } from '@/features/agente/PainelManha'
 import { Carteira } from '@/features/carteira/Carteira'
 import { CartaoCredito } from '@/features/cartao/CartaoCredito'
-import { Planejamento } from '@/features/planejamento/Planejamento'
+import { Planejamento, calcularBasesPlanejamento } from '@/features/planejamento/Planejamento'
 import { somarMeses } from '@/lib/recorrencia'
 import { Confirmar, Toast, type DadosToast } from '@/components/ui'
 import { AvisoAtualizacao } from '@/components/BotaoAtualizar'
@@ -132,6 +132,9 @@ function Shell({ aoSair }: { aoSair: () => void }) {
 
   const k = chave(ano, mes)
   const lista = useMemo(() => doMes(estado, k), [estado, k])
+  const mesesPlano = useMemo(() => Array.from({ length: 13 }, (_, i) => somarMeses(estado.planejamento.inicio, i)), [estado.planejamento.inicio])
+  const baseDoMes = estado.planejamento.bases[k]
+  const planoDoMes = baseDoMes ?? null
 
   const mostrarToast = useCallback((msg: string, acao?: DadosToast['acao']) => {
     setToast({ msg, ...(acao ? { acao } : {}) })
@@ -161,6 +164,12 @@ function Shell({ aoSair }: { aoSair: () => void }) {
   useEffect(() => {
     dispatch({ t: 'materializar', ateMes: k })
   }, [k, dispatch])
+
+  useEffect(() => {
+    if (mesesPlano.some((mesPlano) => estado.planejamento.bases[mesPlano]?.revisao !== estado.planejamento.revisao)) {
+      dispatch({ t: 'planejamento-bases', bases: calcularBasesPlanejamento(estado, mesesPlano) })
+    }
+  }, [estado, mesesPlano, dispatch])
 
   usarNotificacoes(estado)
 
@@ -288,6 +297,7 @@ function Shell({ aoSair }: { aoSair: () => void }) {
             ano={ano}
             mes={mes}
             estado={estado}
+            planejado={contaAtiva === 'todas' ? planoDoMes : null}
             aoIrParaAba={setAba}
             aoCopiarMes={(itens, destino, qtd) => {
               dispatch({ t: 'inserir', mes: destino, itens })
@@ -305,6 +315,7 @@ function Shell({ aoSair }: { aoSair: () => void }) {
           <ListaLancamentos
             lista={lista.filter((l) => (aba === 'receitas' ? l.tl === 'receita' : l.tl === 'despesa'))}
             tipo={aba === 'receitas' ? 'receita' : 'despesa'}
+            planejado={contaAtiva === 'todas' ? planoDoMes : null}
             contas={estado.contas}
             mostrarConta={contaAtiva === 'todas' && estado.contas.length > 1}
             filtro={filtro}
@@ -348,7 +359,7 @@ function Shell({ aoSair }: { aoSair: () => void }) {
 
         {aba === 'cartao' ? <CartaoCredito faturas={estado.faturasCartao} mes={k} aoSalvar={(fatura) => dispatch({ t: 'fatura-salvar', fatura })} aoImportar={(faturas) => dispatch({ t: 'faturas-importar', faturas })} aoRemover={(id) => dispatch({ t: 'fatura-remover', id })} aoCategoria={(faturaId, gastoId, categoria) => dispatch({ t: 'fatura-categoria', faturaId, gastoId, categoria })} /> : null}
 
-        {aba === 'planejamento' ? <Planejamento estado={estado} inicio={somarMeses(chave(agora.getFullYear(), agora.getMonth()), 1)} aoAjustar={(chaveAjuste, valor) => dispatch({ t: 'planejamento-ajuste', chave: chaveAjuste, valor })} aoAdicionar={(item) => dispatch({ t: 'planejamento-item', item })} aoRenomear={(id, nome) => dispatch({ t: 'planejamento-nome', id, nome })} aoOcultar={(id, ocultar) => dispatch({ t: 'planejamento-ocultar', id, ocultar })} /> : null}
+        {aba === 'planejamento' ? <Planejamento estado={estado} aoAjustar={(chaveAjuste, valor) => dispatch({ t: 'planejamento-ajuste', chave: chaveAjuste, valor })} aoAdicionar={(item) => dispatch({ t: 'planejamento-item', item })} aoImportar={(itens) => dispatch({ t: 'planejamento-importar', itens })} aoRenomear={(id, nome) => dispatch({ t: 'planejamento-nome', id, nome })} aoOcultar={(id, ocultar) => dispatch({ t: 'planejamento-ocultar', id, ocultar })} aoMudarInicio={(inicio) => dispatch({ t: 'planejamento-inicio', inicio })} /> : null}
 
         {aba === 'sms' ? (
           <ColarSMS

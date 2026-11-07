@@ -178,10 +178,13 @@ export function normalizarEstado(bruto: unknown): EstadoApp | null {
     carteira: Array.isArray(e.carteira) ? e.carteira : [],
     faturasCartao: Array.isArray(e.faturasCartao) ? e.faturasCartao : [],
     planejamento: {
+      inicio: /^\d{4}-(0[1-9]|1[0-2])$/.test(e.planejamento?.inicio ?? '') ? e.planejamento!.inicio : '2026-12',
       ajustes: e.planejamento && typeof e.planejamento === 'object' && e.planejamento.ajustes && typeof e.planejamento.ajustes === 'object' ? e.planejamento.ajustes : {},
       itens: Array.isArray(e.planejamento?.itens) ? e.planejamento.itens : [],
       nomes: e.planejamento && typeof e.planejamento === 'object' && e.planejamento.nomes && typeof e.planejamento.nomes === 'object' ? e.planejamento.nomes : {},
       ocultos: Array.isArray(e.planejamento?.ocultos) ? e.planejamento.ocultos : [],
+      revisao: Number.isInteger(e.planejamento?.revisao) ? e.planejamento!.revisao : 0,
+      bases: e.planejamento && typeof e.planejamento === 'object' && e.planejamento.bases && typeof e.planejamento.bases === 'object' ? e.planejamento.bases : {},
     },
     config: { ...base.config, ...(e.config ?? {}) },
     updatedAt: Number(e.updatedAt) || Date.now(),
