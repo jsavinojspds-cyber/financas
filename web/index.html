@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Comprovantes">
   <title>Comprovantes</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <header><h1>Comprovantes</h1><p>Seus recibos, sempre à mão</p></header>
@@ -32,6 +32,9 @@
       <label>Observação<textarea id="note" rows="4" placeholder="Ex.: Jantar no hotel durante a integração na empresa"></textarea></label>
       <button id="dictate" type="button">🎙️ Iniciar ditado</button>
       <p id="dictation-status" class="hint" role="status" aria-live="polite">Toque em Iniciar ditado, fale e depois toque em Parar ditado. A transcrição aparece na observação.</p>
+      <button id="record-audio" type="button">🔴 Gravar áudio</button>
+      <p id="audio-status" class="hint" role="status">O áudio pode ser guardado junto com o comprovante caso a transcrição falhe.</p>
+      <audio id="audio-preview" controls hidden></audio>
       <p class="hint">Você também pode tocar no microfone do teclado do iPhone para ditar. Confira o texto antes de salvar.</p>
       <div class="actions"><button id="save" class="primary">Salvar JPG</button><button id="cancel">Cancelar</button></div>
     </section>
@@ -50,6 +53,6 @@
     <p id="message" role="status"></p>
     <p class="hint foot">Os comprovantes ficam neste aparelho. Ao compartilhar, o JPG inclui data, valor, estabelecimento, cidade/UF e observação. Exporte cada mês em ZIP para guardar uma cópia no Arquivos. Apagar os dados deste app pode apagar a lista.</p>
   </main>
-  <script src="app.js?v=6" defer></script>
+  <script src="app.js?v=7" defer></script>
 </body>
 </html>
