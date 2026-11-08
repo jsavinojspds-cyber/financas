@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Comprovantes">
   <title>Comprovantes</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="app-style.css?v=10">
+  <link rel="stylesheet" href="app-style.css?v=11">
 </head>
 <body>
   <header class="hero">
@@ -33,7 +33,8 @@
       <p id="ocr-status" class="hint"></p>
       <label>Data<input id="date" type="date" required></label>
       <label>Valor total (R$)<input id="amount" type="text" inputmode="decimal" placeholder="85,90" required></label>
-      <label>Cidade e UF da nota<input id="region" type="text" placeholder="Ex.: São Paulo - SP"></label>
+      <label>Cidade e UF da loja ou emissor<input id="region" type="text" placeholder="Ex.: Taboão da Serra - SP"></label>
+      <p class="hint">Em NF-e, confira o endereço de quem emitiu a nota.</p>
       <label>Observação<textarea id="note" rows="4" placeholder="Ex.: Jantar no hotel durante a integração na empresa"></textarea></label>
       <div class="actions editor-actions"><button id="save" class="primary">Salvar e visualizar</button><button id="cancel">Cancelar</button></div>
     </section>
@@ -60,6 +61,6 @@
     <div class="detail-body"><img id="detail-preview" alt="Prévia do JPG salvo"><p id="detail-summary"></p><p id="detail-note"></p></div>
     <div class="detail-actions"><button id="detail-share" type="button" class="primary">Compartilhar JPG</button><button id="detail-download" type="button">Baixar JPG</button></div>
   </dialog>
-  <script src="app.js?v=10" defer></script>
+  <script src="app.js?v=11" defer></script>
 </body>
 </html>

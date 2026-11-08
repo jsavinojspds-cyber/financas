@@ -15,30 +15,45 @@ const remove=id=>transaction('readwrite',store=>store.delete(id));
 
 async function jpg(file){const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});const canvas=document.createElement('canvas');const scale=Math.min(1,2400/Math.max(bitmap.width,bitmap.height));canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Falha ao converter a imagem.')),'image/jpeg',.9))}
 function parseReading(text){
-  const lines=text.split(/\n/).map(line=>line.trim()).filter(Boolean), result={};
-  const date=text.match(/\b(\d{2})[\/.\-](\d{2})[\/.\-](\d{4})\b/);
+  const lines=text.split(/\n/).map(line=>line.trim()).filter(Boolean),result={};
+  const normalize=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ');
+  const normalized=lines.map(normalize),allText=normalized.join(' ');
+  const danfe=/\bDANFE\b|\bNF-E\b|NOTA FISCAL ELETRONICA/.test(allText);
+  const datePattern=/\b(\d{2})[\/.\-](\d{2})[\/.\-](\d{4})\b/;
+  const emission=normalized.findIndex(line=>/EMISS[AO]|DATA DE EMISSAO/.test(line));
+  const dateSource=emission>=0?lines.slice(emission,emission+3).join(' '):text;
+  const date=dateSource.match(datePattern)||text.match(datePattern);
   if(date){const iso=`${date[3]}-${date[2]}-${date[1]}`,d=new Date(`${iso}T12:00:00`);if(!Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===iso)result.date=iso}
-  const states='AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO';
-  const normalize=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
-  for(let i=0;i<lines.length;i++){
-    const match=lines[i].match(new RegExp(`([A-Za-zÀ-ú0-9 .]{3,55})\\s*[-,/]\\s*(${states})\\b`,'i'));
-    if(!match)continue;
-    let city=match[1].trim().replace(/^.*\d\s+/,'').replace(/^[^A-Za-zÀ-ú]+/,'').trim();
-    const context=normalize(`${lines[i-1]||''} ${city}`).replace(/[^A-Z ]/g,' ').replace(/\s+/g,' ');
-    if(match[2].toUpperCase()==='SP'&&/S\s*A?\s*[O0]?\s*PAULO\b|\bPAULO\b/.test(context))city='São Paulo';
-    else if(/\d|^[A-Za-zÀ-ú]\s*$/.test(city))continue;
-    if(city){result.region=`${city} - ${match[2].toUpperCase()}`;break}
-  }
-  if(!result.region&&/S\s*A?\s*[O0]?\s*PAULO\b/.test(normalize(text).replace(/[^A-Z ]/g,' ').replace(/\s+/g,' ')))result.region='São Paulo - SP';
-  for(let i=0;i<lines.length;i++){
-    const label=lines[i].normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
-    if(!label.includes('TOTAL')||label.includes('SUBTOTAL')||label.includes('TRIBUT'))continue;
-    for(const candidate of [lines[i],lines[i+1]||'']){
-      const matches=[...candidate.matchAll(/\b\d{1,3}(?:\.\d{3})*,\d{2}\b|\b\d+,\d{2}\b/g)];
-      if(matches.length){result.amount=matches.at(-1)[0];break}
+  const valuePattern=/(?:R\$\s*)?\b(\d{1,3}(?:[. ]\d{3})*|\d+)[,.](\d{2})\b/g;
+  const priorities=[/VALOR TOTAL\s*:\s*R\$/, /VALOR TOTAL DA NOTA|TOTAL DA NOTA/,/VALOR TOTAL(?! DOS PRODUTOS)|TOTAL A PAGAR|VALOR A PAGAR/,/\bTOTAL\b/];
+  for(const priority of priorities){
+    for(let i=0;i<lines.length;i++){
+      const label=normalized[i];
+      if(!priority.test(label)||/SUBTOTAL|TRIBUT|IMPOST|DESCONTO/.test(label))continue;
+      const nearby=lines.slice(i,i+(priority===priorities[1]?10:2)).join(' ');
+      const values=[...nearby.matchAll(valuePattern)].filter(value=>Number(value[1].replace(/[. ]/g,''))*100+Number(value[2])>0);
+      if(values.length){const value=priority===priorities[1]?values.at(-1):values[0];result.amount=`${value[1].replace(/[. ]/g,'')},${value[2]}`;break}
     }
     if(result.amount)break;
   }
+  const recipientIndex=normalized.findIndex(line=>/DESTINATARIO|REMETENTE/.test(line));
+  const issuerLines=danfe&&recipientIndex>=0?normalized.slice(0,recipientIndex):normalized;
+  const issuerText=issuerLines.join(' ');
+  if(/TABO[AÃ]?O\s+DA\s+SERRA\s*[-,]?\s*SP\b/.test(issuerText))result.region='Taboão da Serra - SP';
+  if(!result.region){
+    const states='AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO';
+    const scope=danfe?issuerLines:normalized;
+    for(let i=0;i<scope.length;i++){
+      const match=scope[i].match(new RegExp(`([A-Z ]{3,45})\\s*[-,/]\\s*(${states})\\b`));
+      if(!match)continue;
+      let city=match[1].trim().replace(/^.*\b(?:CEP|ENDERECO|RUA|AVENIDA|AV)\b.*?\d+\s*/,'').trim();
+      if(match[2]==='SP'&&/\bPAULO\b/.test(normalize(`${scope[i-1]||''} ${city}`)))city='São Paulo';
+      if(/\d|^[A-Z]$/.test(city)||!city)continue;
+      const displayCity=city==='São Paulo'?city:city.toLowerCase().replace(/(^|\s)(\p{L})/gu,(_,space,letter)=>space+letter.toUpperCase());
+      result.region=`${displayCity} - ${match[2]}`;break;
+    }
+  }
+  if(!result.region&&!danfe&&/S\s*A?\s*O\s+PAULO\b/.test(allText))result.region='São Paulo - SP';
   return result;
 }
 async function recognize(blob,token){
