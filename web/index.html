@@ -27,6 +27,11 @@
       <p id="ocr-status" class="hint"></p>
       <label>Data<input id="date" type="date" required></label>
       <label>Valor total (R$)<input id="amount" type="text" inputmode="decimal" placeholder="85,90" required></label>
+      <label>Estabelecimento<input id="merchant" type="text" placeholder="Ex.: ZAB Hotel"></label>
+      <label>Cidade e UF da nota<input id="region" type="text" placeholder="Ex.: São Paulo - SP"></label>
+      <label>Observação<textarea id="note" rows="4" placeholder="Ex.: Jantar no hotel durante a integração na empresa"></textarea></label>
+      <button id="dictate" type="button">🎙️ Ditar observação</button>
+      <p class="hint">Você também pode tocar no microfone do teclado do iPhone para ditar. Confira o texto antes de salvar.</p>
       <div class="actions"><button id="save" class="primary">Salvar JPG</button><button id="cancel">Cancelar</button></div>
     </section>
     <section class="card">
@@ -35,7 +40,7 @@
       <div id="list"></div>
     </section>
     <p id="message" role="status"></p>
-    <p class="hint foot">Os comprovantes ficam neste navegador. Use Compartilhar ou Baixar para guardar cada JPG no app Arquivos ou enviá-lo por WhatsApp e e-mail. Apagar os dados do Safari pode apagar esta lista.</p>
+    <p class="hint foot">Os comprovantes ficam neste aparelho. Ao compartilhar, o JPG inclui data, valor, estabelecimento, cidade/UF e observação. Exporte cada mês em ZIP para guardar uma cópia no Arquivos. Apagar os dados deste app pode apagar a lista.</p>
   </main>
   <script src="app.js" defer></script>
 </body>
