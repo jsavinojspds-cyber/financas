@@ -3,36 +3,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#087f78">
+  <meta name="theme-color" content="#102e36">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Comprovantes">
   <title>Comprovantes</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="app-style.css?v=10">
 </head>
 <body>
-  <header><h1>Comprovantes</h1><p>Seus recibos, sempre à mão</p></header>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">C</span><span>Comprovantes</span><span class="brand-tag">PESSOAL</span></div>
+      <div class="hero-copy"><span class="eyebrow">SEU ARQUIVO DE DESPESAS</span><h1>Organize hoje.<br><em>Encontre quando precisar.</em></h1><p>Fotografe, confira e guarde cada comprovante em um só lugar.</p></div>
+      <div class="hero-stat"><span class="stat-icon" aria-hidden="true">▧</span><span><strong id="hero-count">0</strong><small>comprovantes guardados neste aparelho</small></span></div>
+    </div>
+  </header>
   <main>
-    <section class="card">
-      <h2>Adicionar comprovante</h2>
+    <section id="capture" class="card capture-card">
+      <div class="section-heading"><span class="eyebrow">NOVO REGISTRO</span><h2>Adicionar comprovante</h2><p>Escolha como deseja começar.</p></div>
       <div class="actions">
-        <label class="button primary">📷 Fotografar<input id="camera" type="file" accept="image/*" capture="environment" hidden></label>
-        <label class="button">▧ Importar imagem<input id="import" type="file" accept="image/*" hidden></label>
+        <label class="button primary capture-button"><span aria-hidden="true">📷</span> Fotografar<input id="camera" type="file" accept="image/*" capture="environment" hidden></label>
+        <label class="button capture-button"><span aria-hidden="true">▧</span> Importar imagem<input id="import" type="file" accept="image/*" hidden></label>
       </div>
-      <p class="hint">A imagem é convertida em JPG no seu aparelho. Confira a leitura antes de salvar.</p>
+      <p class="hint subtle">A imagem vira JPG no seu aparelho. Você confere os dados antes de salvar.</p>
     </section>
     <section id="editor" class="card" hidden>
-      <h2>Confira antes de salvar</h2>
+      <div class="section-heading"><span class="eyebrow">REVISÃO</span><h2>Confira antes de salvar</h2><p>Veja se os dados combinam com a imagem.</p></div>
       <img id="preview" alt="Imagem do comprovante">
       <p id="ocr-status" class="hint"></p>
       <label>Data<input id="date" type="date" required></label>
       <label>Valor total (R$)<input id="amount" type="text" inputmode="decimal" placeholder="85,90" required></label>
       <label>Cidade e UF da nota<input id="region" type="text" placeholder="Ex.: São Paulo - SP"></label>
       <label>Observação<textarea id="note" rows="4" placeholder="Ex.: Jantar no hotel durante a integração na empresa"></textarea></label>
-      <div class="actions"><button id="save" class="primary">Salvar JPG</button><button id="cancel">Cancelar</button></div>
+      <div class="actions editor-actions"><button id="save" class="primary">Salvar e visualizar</button><button id="cancel">Cancelar</button></div>
     </section>
-    <section class="card">
-      <h2>Meus comprovantes <span id="count"></span></h2>
+    <section id="receipts" class="card library-card">
+      <div class="section-heading"><span class="eyebrow">ARQUIVO</span><h2>Meus comprovantes <span id="count"></span></h2><p>Encontre e compartilhe quando precisar.</p></div>
+      <details class="filter-panel"><summary>Filtrar comprovantes <span aria-hidden="true">⌄</span></summary>
       <div class="filters">
         <label>Mês e ano<input id="filter-month" type="month" aria-label="Filtrar por mês e ano"></label>
         <label>De<input id="filter-start" type="date" aria-label="Data inicial"></label>
@@ -41,11 +48,18 @@
         <label>Estado<select id="filter-state" aria-label="Filtrar por estado"><option value="">Todos os estados</option></select></label>
       </div>
       <button id="clear-filters" type="button">Limpar filtros</button>
+      </details>
       <div id="list"></div>
     </section>
     <p id="message" role="status"></p>
     <p class="hint foot">Os comprovantes ficam neste aparelho. Ao compartilhar, o JPG inclui data, valor, cidade/UF e observação. Exporte cada mês em ZIP para guardar uma cópia no Arquivos. Apagar os dados deste app pode apagar a lista.</p>
   </main>
-  <script src="app.js?v=9" defer></script>
+  <nav class="bottom-nav" aria-label="Navegação principal"><a href="#capture"><span aria-hidden="true">＋</span> Adicionar</a><a href="#receipts"><span aria-hidden="true">▤</span> Comprovantes</a></nav>
+  <dialog id="receipt-dialog" aria-labelledby="detail-title">
+    <div class="detail-header"><div><span class="eyebrow">PRONTO PARA COMPARTILHAR</span><h2 id="detail-title">Comprovante</h2></div><button id="detail-close" type="button" class="icon-button" aria-label="Fechar">✕</button></div>
+    <div class="detail-body"><img id="detail-preview" alt="Prévia do JPG salvo"><p id="detail-summary"></p><p id="detail-note"></p></div>
+    <div class="detail-actions"><button id="detail-share" type="button" class="primary">Compartilhar JPG</button><button id="detail-download" type="button">Baixar JPG</button></div>
+  </dialog>
+  <script src="app.js?v=10" defer></script>
 </body>
 </html>

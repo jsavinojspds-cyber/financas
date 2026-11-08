@@ -4,7 +4,7 @@ Versão web instalável pela Tela de Início, publicada junto ao projeto Finanç
 
 ## No iPhone
 
-Abra o endereço no Safari. Toque em Compartilhar → Adicionar à Tela de Início. Fotografe ou importe uma imagem, confira data, valor e cidade/UF. Escreva uma observação sobre a despesa. Na lista, os comprovantes aparecem por mês. Use **Compartilhar JPG** para enviar a imagem ao WhatsApp, Mail ou Arquivos; a cópia compartilhada recebe um rodapé com os dados conferidos. Use **Baixar mês em ZIP** para guardar os comprovantes daquele mês juntos.
+Abra o endereço no Safari. Toque em Compartilhar → Adicionar à Tela de Início. Fotografe ou importe uma imagem, confira data, valor e cidade/UF. Escreva uma observação sobre a despesa. Ao salvar, o app abre a prévia do JPG para conferir e compartilhar imediatamente. Na lista, os comprovantes aparecem por mês e o botão **Ver** reabre a prévia. Use **Compartilhar JPG** para enviar a imagem ao WhatsApp, Mail ou Arquivos; a cópia compartilhada recebe um rodapé com os dados conferidos. Use **Baixar mês em ZIP** para guardar os comprovantes daquele mês juntos.
 
 ## Dados e limites
 

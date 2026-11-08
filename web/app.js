@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-let db, pendingBlob, pendingURL, readingToken = 0;
+let db, pendingBlob, pendingURL, detailURL, detailId, readingToken = 0;
 const edited = {date: false, amount: false, region: false};
 const money=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 const monthFormat=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'});
@@ -88,6 +88,21 @@ async function exportItem(id,action){
     download(blob,filename(item));
   }catch(error){showMessage(`Não foi possível preparar o JPG: ${error.message}`)}
 }
+async function openReceipt(id,justSaved=false){
+  const item=await get(id);if(!item)throw new Error('Comprovante não encontrado.');
+  const blob=await annotatedJPG(item);
+  if(detailURL)URL.revokeObjectURL(detailURL);
+  detailURL=URL.createObjectURL(blob);detailId=id;
+  $('detail-preview').src=detailURL;
+  $('detail-title').textContent=justSaved?'Comprovante salvo':'Seu comprovante';
+  $('detail-summary').textContent=`${money.format(item.cents/100)} · ${item.date.split('-').reverse().join('/')} · ${item.region||'Local não informado'}`;
+  $('detail-note').textContent=item.note||'Sem observação';
+  $('receipt-dialog').showModal();
+}
+$('detail-close').onclick=()=>$('receipt-dialog').close();
+$('receipt-dialog').addEventListener('close',()=>{if(detailURL)URL.revokeObjectURL(detailURL);detailURL=null;$('detail-preview').removeAttribute('src')});
+$('detail-share').onclick=()=>exportItem(detailId,'share');
+$('detail-download').onclick=()=>exportItem(detailId,'download');
 function crc32(bytes){let crc=-1;for(const byte of bytes){crc^=byte;for(let i=0;i<8;i++)crc=(crc>>>1)^(crc&1?0xedb88320:0)}return(crc^-1)>>>0}
 async function zipMonth(items){
   const encoder=new TextEncoder(),parts=[],central=[];let offset=0;
@@ -119,18 +134,22 @@ async function render(){
   const month=$('filter-month').value,start=$('filter-start').value,end=$('filter-end').value,state=$('filter-state').value;
   const amountText=$('filter-amount').value.trim(),amount=amountText?centsFrom(amountText):null;
   const found=entries.filter(item=>(!month||item.date.slice(0,7)===month)&&(!start||item.date>=start)&&(!end||item.date<=end)&&(!amountText||(amount!==null&&item.cents===amount))&&(!state||new RegExp(`(?:^|\\W)${state}$`,'i').test((item.region||'').trim())));
+  $('hero-count').textContent=entries.length;
   $('count').textContent=`· ${found.length}`;const list=$('list');list.replaceChildren();
   if(!found.length){const p=document.createElement('p');p.className='hint';p.textContent=entries.length?'Nenhum resultado.':'Nenhum comprovante salvo ainda.';list.append(p)}
   const months=new Map();for(const item of found){const month=item.date.slice(0,7);if(!months.has(month))months.set(month,[]);months.get(month).push(item)}
   for(const [month,items] of months){
     const group=document.createElement('section');group.className='month';const heading=document.createElement('h3');heading.textContent=monthFormat.format(new Date(`${month}-01T12:00:00`));
-    const exportButton=document.createElement('button');exportButton.textContent='Baixar mês em ZIP';exportButton.onclick=()=>exportMonth(month,items,exportButton);group.append(heading,exportButton);
+    const monthHeading=document.createElement('div');monthHeading.className='month-heading';
+    const exportButton=document.createElement('button');exportButton.textContent='Baixar mês em ZIP';exportButton.onclick=()=>exportMonth(month,items,exportButton);monthHeading.append(heading,exportButton);group.append(monthHeading);
     for(const item of items){
-      const row=document.createElement('div');row.className='receipt';const title=document.createElement('strong');title.textContent=money.format(item.cents/100);
-      const details=document.createElement('small');details.textContent=`${item.date.split('-').reverse().join('/')} · ${item.region||'Cidade/UF não informada'}${item.note?` · ${item.note}`:''}`;
-      const actions=document.createElement('div');actions.className='actions';for(const [label,action] of [['Compartilhar JPG','share'],['Baixar JPG','download']]){const button=document.createElement('button');button.textContent=label;button.onclick=()=>exportItem(item.id,action);actions.append(button)}
+      const row=document.createElement('div');row.className='receipt';const icon=document.createElement('span');icon.className='receipt-icon';icon.textContent='▤';icon.setAttribute('aria-hidden','true');
+      const content=document.createElement('div');content.className='receipt-content';const title=document.createElement('strong');title.textContent=money.format(item.cents/100);
+      const details=document.createElement('small');details.textContent=`${item.date.split('-').reverse().join('/')} · ${item.region||'Cidade/UF não informada'}${item.note?` · ${item.note}`:''}`;content.append(title,details);
+      const actions=document.createElement('div');actions.className='actions';const viewButton=document.createElement('button');viewButton.textContent='Ver';viewButton.className='primary';viewButton.onclick=()=>openReceipt(item.id).catch(error=>showMessage(error.message));actions.append(viewButton);
+      const shareButton=document.createElement('button');shareButton.textContent='Compartilhar';shareButton.onclick=()=>exportItem(item.id,'share');actions.append(shareButton);
       const deleteButton=document.createElement('button');deleteButton.textContent='Apagar';deleteButton.className='danger';deleteButton.onclick=()=>deleteItem(item);actions.append(deleteButton);
-      row.append(title,details,actions);group.append(row);
+      row.append(icon,content,actions);group.append(row);
     }
     list.append(group);
   }
@@ -139,12 +158,14 @@ for(const id of ['camera','import'])$(id).addEventListener('change',event=>{sele
 for(const field of Object.keys(edited))$(field).addEventListener('input',()=>{edited[field]=true});
 $('cancel').onclick=()=>{readingToken++;$('editor').hidden=true;pendingBlob=null};
 $('save').onclick=async()=>{
+  $('save').disabled=true;
   const cents=centsFrom($('amount').value),date=$('date').value;
-  if(!pendingBlob||!date||cents===null){showMessage('Confira a data e digite um valor maior que zero, como 85,90.');return}
+  if(!pendingBlob||!date||cents===null){showMessage('Confira a data e digite um valor maior que zero, como 85,90.');$('save').disabled=false;return}
+  let saved=false;
   try{
-    await put({id:crypto.randomUUID(),date,cents,region:$('region').value.trim(),note:$('note').value.trim(),image:pendingBlob});
-    readingToken++;$('editor').hidden=true;pendingBlob=null;showMessage('Comprovante salvo.');await render();
-  }catch(error){showMessage(`Não foi possível salvar: ${error.message}`)}
+    const item={id:crypto.randomUUID(),date,cents,region:$('region').value.trim(),note:$('note').value.trim(),image:pendingBlob};
+    await put(item);saved=true;readingToken++;$('editor').hidden=true;pendingBlob=null;showMessage('');await render();await openReceipt(item.id,true);
+  }catch(error){showMessage(saved?`Comprovante salvo, mas não foi possível abrir a prévia: ${error.message}`:`Não foi possível salvar: ${error.message}`)}finally{$('save').disabled=false}
 };
 const states={AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
 for(const [uf,name] of Object.entries(states))$('filter-state').add(new Option(`${name} (${uf})`,uf));
