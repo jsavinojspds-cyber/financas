@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-let db, pendingBlob, pendingURL, readingToken = 0, recognition;
+let db, pendingBlob, pendingURL, readingToken = 0, recognition, dictationBase = '', dictationStarted = false, dictationHeard = false;
 const edited = {date: false, amount: false, merchant: false, region: false};
 const money=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 const monthFormat=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'});
@@ -104,8 +104,10 @@ async function zipMonth(items){
 }
 async function exportMonth(month,items,button){button.disabled=true;button.textContent='Preparando ZIP…';try{download(await zipMonth(items),`Comprovantes_${month}.zip`)}catch(error){showMessage(`Não foi possível exportar o mês: ${error.message}`)}finally{button.disabled=false;button.textContent='Baixar mês em ZIP'}}
 async function render(){
-  const entries=(await all()).sort((a,b)=>b.date.localeCompare(a.date)),q=$('search').value.trim().toLowerCase();
-  const found=entries.filter(item=>!q||[item.date,item.date.split('-').reverse().join('/'),money.format(item.cents/100),item.merchant,item.region,item.note].some(value=>String(value||'').toLowerCase().includes(q)));
+  const entries=(await all()).sort((a,b)=>b.date.localeCompare(a.date));
+  const month=$('filter-month').value,start=$('filter-start').value,end=$('filter-end').value,state=$('filter-state').value;
+  const amountText=$('filter-amount').value.trim(),amount=amountText?centsFrom(amountText):null;
+  const found=entries.filter(item=>(!month||item.date.slice(0,7)===month)&&(!start||item.date>=start)&&(!end||item.date<=end)&&(!amountText||(amount!==null&&item.cents===amount))&&(!state||new RegExp(`(?:^|\\W)${state}$`,'i').test((item.region||'').trim())));
   $('count').textContent=`· ${found.length}`;const list=$('list');list.replaceChildren();
   if(!found.length){const p=document.createElement('p');p.className='hint';p.textContent=entries.length?'Nenhum resultado.':'Nenhum comprovante salvo ainda.';list.append(p)}
   const months=new Map();for(const item of found){const month=item.date.slice(0,7);if(!months.has(month))months.set(month,[]);months.get(month).push(item)}
@@ -132,17 +134,25 @@ $('save').onclick=async()=>{
     readingToken++;$('editor').hidden=true;pendingBlob=null;showMessage('');await render();
   }catch(error){showMessage(`Não foi possível salvar: ${error.message}`)}
 };
+const states={AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
+for(const [uf,name] of Object.entries(states))$('filter-state').add(new Option(`${name} (${uf})`,uf));
+const filterIds=['filter-month','filter-start','filter-end','filter-amount','filter-state'];
+for(const id of filterIds)$(id).addEventListener(id==='filter-state'?'change':'input',()=>render().catch(error=>showMessage(error.message)));
+$('clear-filters').onclick=()=>{for(const id of filterIds)$(id).value='';render().catch(error=>showMessage(error.message))};
+function dictationStatus(message){$('dictation-status').textContent=message}
+function resetDictation(){dictationStarted=false;$('dictate').textContent='🎙️ Iniciar ditado';recognition=null}
 $('dictate').onclick=()=>{
+  if(dictationStarted){dictationStatus('Finalizando a transcrição…');$('dictate').disabled=true;recognition?.stop();return}
   const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!Speech){showMessage('Ditado indisponível aqui. Use o microfone do teclado do iPhone na observação.');$('note').focus();return}
+  if(!Speech){dictationStatus('Ditado indisponível neste navegador. Use o microfone do teclado do iPhone na observação.');$('note').focus();return}
   try{
-    recognition?.abort();recognition=new Speech();recognition.lang='pt-BR';recognition.interimResults=false;
-    recognition.onresult=event=>{const spoken=event.results[event.results.length-1][0].transcript;$('note').value=[$('note').value.trim(),spoken].filter(Boolean).join(' ')};
-    recognition.onerror=()=>showMessage('Não foi possível ditar. Use o microfone do teclado do iPhone.');
-    recognition.onend=()=>{$('dictate').textContent='🎙️ Ditar observação'};
-    $('dictate').textContent='Ouvindo…';recognition.start();
-  }catch{showMessage('Não foi possível iniciar o ditado. Use o microfone do teclado do iPhone.')}
+    recognition=new Speech();recognition.lang='pt-BR';recognition.continuous=true;recognition.interimResults=true;
+    dictationBase=$('note').value.trim();dictationHeard=false;
+    recognition.onresult=event=>{let transcript='';for(const result of event.results)transcript+=`${result[0].transcript.trim()} `;transcript=transcript.trim();if(transcript){dictationHeard=true;$('note').value=[dictationBase,transcript].filter(Boolean).join(' ');dictationStatus('Transcrição aparecendo na observação. Toque em Parar ditado ao terminar.')}};
+    recognition.onerror=event=>{dictationStatus(event.error==='not-allowed'?'Permita o uso do microfone nas configurações do Safari.':'Não foi possível transcrever a fala. Use o microfone do teclado do iPhone na observação.')};
+    recognition.onend=()=>{if(!dictationHeard&&$('dictation-status').textContent==='Finalizando a transcrição…')dictationStatus('Nenhuma fala foi transcrita. Tente no Safari ou use o microfone do teclado do iPhone.');else if(dictationHeard)dictationStatus('Ditado encerrado. Confira a transcrição na observação antes de salvar.');resetDictation();$('dictate').disabled=false};
+    recognition.start();dictationStarted=true;$('dictate').textContent='⏹️ Parar ditado';dictationStatus('Ouvindo… fale agora e toque em Parar ditado ao terminar.');
+  }catch{resetDictation();dictationStatus('Não foi possível iniciar o ditado. Use o microfone do teclado do iPhone.')}
 };
-$('search').oninput=()=>render().catch(error=>showMessage(error.message));
 openDB().then(value=>{db=value;return render()}).catch(()=>showMessage('Este navegador não permitiu salvar comprovantes. Verifique o armazenamento do Safari.'));
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});

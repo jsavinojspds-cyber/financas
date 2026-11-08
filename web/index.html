@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Comprovantes">
   <title>Comprovantes</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
   <header><h1>Comprovantes</h1><p>Seus recibos, sempre à mão</p></header>
@@ -30,18 +30,26 @@
       <label>Estabelecimento<input id="merchant" type="text" placeholder="Ex.: ZAB Hotel"></label>
       <label>Cidade e UF da nota<input id="region" type="text" placeholder="Ex.: São Paulo - SP"></label>
       <label>Observação<textarea id="note" rows="4" placeholder="Ex.: Jantar no hotel durante a integração na empresa"></textarea></label>
-      <button id="dictate" type="button">🎙️ Ditar observação</button>
+      <button id="dictate" type="button">🎙️ Iniciar ditado</button>
+      <p id="dictation-status" class="hint" role="status" aria-live="polite">Toque em Iniciar ditado, fale e depois toque em Parar ditado. A transcrição aparece na observação.</p>
       <p class="hint">Você também pode tocar no microfone do teclado do iPhone para ditar. Confira o texto antes de salvar.</p>
       <div class="actions"><button id="save" class="primary">Salvar JPG</button><button id="cancel">Cancelar</button></div>
     </section>
     <section class="card">
       <h2>Meus comprovantes <span id="count"></span></h2>
-      <input id="search" type="search" placeholder="Buscar por data ou valor" aria-label="Buscar por data ou valor">
+      <div class="filters">
+        <label>Mês e ano<input id="filter-month" type="month" aria-label="Filtrar por mês e ano"></label>
+        <label>De<input id="filter-start" type="date" aria-label="Data inicial"></label>
+        <label>Até<input id="filter-end" type="date" aria-label="Data final"></label>
+        <label>Valor (R$)<input id="filter-amount" type="text" inputmode="decimal" placeholder="Ex.: 89,10"></label>
+        <label>Estado<select id="filter-state" aria-label="Filtrar por estado"><option value="">Todos os estados</option></select></label>
+      </div>
+      <button id="clear-filters" type="button">Limpar filtros</button>
       <div id="list"></div>
     </section>
     <p id="message" role="status"></p>
     <p class="hint foot">Os comprovantes ficam neste aparelho. Ao compartilhar, o JPG inclui data, valor, estabelecimento, cidade/UF e observação. Exporte cada mês em ZIP para guardar uma cópia no Arquivos. Apagar os dados deste app pode apagar a lista.</p>
   </main>
-  <script src="app.js?v=3" defer></script>
+  <script src="app.js?v=5" defer></script>
 </body>
 </html>
