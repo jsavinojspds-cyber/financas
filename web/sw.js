@@ -1,5 +1,5 @@
-const CACHE='comprovantes-v8';
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['./','index.html','style.css?v=8','app.js?v=8','transcribe-worker.js','manifest.webmanifest'])).then(()=>self.skipWaiting())));
+const CACHE='comprovantes-v9';
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['./','index.html','style.css?v=9','app.js?v=9','manifest.webmanifest'])).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET'||new URL(event.request.url).origin!==location.origin)return;
