@@ -40,6 +40,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Incluir Comprovantes
+        run: mkdir -p dist/comprovantes && cp web/* dist/comprovantes/
+
       - name: Impedir publicação sem index.html
         run: test -f dist/index.html
 

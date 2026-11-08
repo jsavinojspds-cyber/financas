@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#087f78">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Comprovantes">
+  <title>Comprovantes</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><h1>Comprovantes</h1><p>Seus recibos, sempre à mão</p></header>
+  <main>
+    <section class="card">
+      <h2>Adicionar comprovante</h2>
+      <div class="actions">
+        <label class="button primary">📷 Fotografar<input id="camera" type="file" accept="image/*" capture="environment" hidden></label>
+        <label class="button">▧ Importar imagem<input id="import" type="file" accept="image/*" hidden></label>
+      </div>
+      <p class="hint">A imagem é convertida em JPG no seu aparelho. Confira a leitura antes de salvar.</p>
+    </section>
+    <section id="editor" class="card" hidden>
+      <h2>Confira antes de salvar</h2>
+      <img id="preview" alt="Imagem do comprovante">
+      <p id="ocr-status" class="hint"></p>
+      <label>Data<input id="date" type="date" required></label>
+      <label>Valor total (R$)<input id="amount" type="text" inputmode="decimal" placeholder="85,90" required></label>
+      <div class="actions"><button id="save" class="primary">Salvar JPG</button><button id="cancel">Cancelar</button></div>
+    </section>
+    <section class="card">
+      <h2>Meus comprovantes <span id="count"></span></h2>
+      <input id="search" type="search" placeholder="Buscar por data ou valor" aria-label="Buscar por data ou valor">
+      <div id="list"></div>
+    </section>
+    <p id="message" role="status"></p>
+    <p class="hint foot">Os comprovantes ficam neste navegador. Use Compartilhar ou Baixar para guardar cada JPG no app Arquivos ou enviá-lo por WhatsApp e e-mail. Apagar os dados do Safari pode apagar esta lista.</p>
+  </main>
+  <script src="app.js" defer></script>
+</body>
+</html>
