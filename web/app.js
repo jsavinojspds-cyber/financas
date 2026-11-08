@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-let db, pendingBlob, pendingURL, pendingAudio, audioRecorder, audioStream, audioURL, renderedAudioURLs=[], readingToken = 0, recognition, dictationBase = '', dictationStarted = false, dictationHeard = false;
+let db, pendingBlob, pendingURL, pendingAudio, audioRecorder, audioStream, audioURL, transcriptionPromise, transcriptionWorker, transcriptionId=0, renderedAudioURLs=[], readingToken = 0, recognition, dictationBase = '', dictationStarted = false, dictationHeard = false;
 const edited = {date: false, amount: false, merchant: false, region: false};
 const money=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 const monthFormat=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'});
@@ -84,6 +84,34 @@ async function annotatedJPG(item){
   return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Falha ao montar JPG')),'image/jpeg',.9));
 }
 function download(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+async function transcribeAudio(blob,onStatus){
+  const context=new AudioContext();let audio;
+  try{
+    const decoded=await context.decodeAudioData(await blob.arrayBuffer());
+    if(decoded.duration>90)throw new Error('Gravação longa demais. Grave até 90 segundos por vez.');
+    const offline=new OfflineAudioContext(1,Math.ceil(decoded.duration*16000),16000);
+    const source=offline.createBufferSource();source.buffer=decoded;source.connect(offline.destination);source.start();
+    audio=(await offline.startRendering()).getChannelData(0).slice();
+  }finally{await context.close()}
+  if(!transcriptionWorker)transcriptionWorker=new Worker('transcribe-worker.js',{type:'module'});
+  const id=++transcriptionId;
+  return new Promise((resolve,reject)=>{
+    const worker=transcriptionWorker;
+    const onMessage=event=>{if(event.data.id!==id)return;if(event.data.status){onStatus(event.data.status);return}worker.removeEventListener('message',onMessage);worker.removeEventListener('error',onError);if(event.data.error)reject(new Error(event.data.error));else resolve(event.data.text)};
+    const onError=()=>{worker.removeEventListener('message',onMessage);worker.removeEventListener('error',onError);transcriptionWorker=null;worker.terminate();reject(new Error('Não foi possível carregar o transcritor.'))};
+    worker.addEventListener('message',onMessage);worker.addEventListener('error',onError);worker.postMessage({id,audio},[audio.buffer]);
+  });
+}
+async function transcribeSaved(item,button){
+  button.disabled=true;
+  try{
+    const text=await transcribeAudio(item.audio,status=>{button.textContent=status});
+    if(!text)throw new Error('Nenhuma fala foi reconhecida.');
+    const current=await get(item.id);if(!current)return;
+    if(!current.note?.includes(text))current.note=[current.note,text].filter(Boolean).join(' ');
+    await put(current);showMessage('Áudio transcrito. Confira a observação no comprovante.');await render();
+  }catch(error){showMessage(`Não foi possível transcrever o áudio: ${error.message}`);button.disabled=false;button.textContent='Transcrever áudio'}
+}
 async function exportItem(id,action){
   try{
     const item=await get(id),blob=await annotatedJPG(item),file=new File([blob],filename(item),{type:'image/jpeg'});
@@ -133,7 +161,7 @@ async function render(){
       const row=document.createElement('div');row.className='receipt';const title=document.createElement('strong');title.textContent=money.format(item.cents/100);
       const details=document.createElement('small');details.textContent=`${item.date.split('-').reverse().join('/')} · ${item.merchant||'Estabelecimento não informado'} · ${item.region||'Cidade/UF não informada'}${item.note?` · ${item.note}`:''}`;
       const actions=document.createElement('div');actions.className='actions';for(const [label,action] of [['Compartilhar JPG','share'],['Baixar JPG','download']]){const button=document.createElement('button');button.textContent=label;button.onclick=()=>exportItem(item.id,action);actions.append(button)}
-      if(item.audio){const play=document.createElement('audio');play.controls=true;const url=URL.createObjectURL(item.audio);renderedAudioURLs.push(url);play.src=url;play.setAttribute('aria-label','Áudio da observação');row.append(play);const audioButton=document.createElement('button');audioButton.textContent='Baixar áudio';audioButton.onclick=()=>download(item.audio,`${item.date}_${item.id}.${item.audio.type.includes('mp4')?'m4a':'webm'}`);actions.append(audioButton)}
+      if(item.audio){const play=document.createElement('audio');play.controls=true;const url=URL.createObjectURL(item.audio);renderedAudioURLs.push(url);play.src=url;play.setAttribute('aria-label','Áudio da observação');row.append(play);const transcribeButton=document.createElement('button');transcribeButton.textContent='Transcrever áudio';transcribeButton.onclick=()=>transcribeSaved(item,transcribeButton);actions.append(transcribeButton);const audioButton=document.createElement('button');audioButton.textContent='Baixar áudio';audioButton.onclick=()=>download(item.audio,`${item.date}_${item.id}.${item.audio.type.includes('mp4')?'m4a':'webm'}`);actions.append(audioButton)}
       const deleteButton=document.createElement('button');deleteButton.textContent='Apagar';deleteButton.className='danger';deleteButton.onclick=()=>deleteItem(item);actions.append(deleteButton);
       row.append(title,details,actions);group.append(row);
     }
@@ -145,6 +173,8 @@ for(const field of Object.keys(edited))$(field).addEventListener('input',()=>{ed
 $('cancel').onclick=()=>{readingToken++;$('editor').hidden=true;pendingBlob=null;clearAudio()};
 $('save').onclick=async()=>{
   if(dictationStarted){$('dictate').click();await new Promise(resolve=>{const check=()=>dictationStarted?setTimeout(check,100):resolve();check()})}
+  if(audioRecorder&&$('record-audio').disabled)await new Promise(resolve=>{const check=()=>$('record-audio').disabled?setTimeout(check,100):resolve();check()});
+  if(transcriptionPromise)await transcriptionPromise;
   const cents=centsFrom($('amount').value),date=$('date').value;
   if(audioRecorder?.state==='recording'){showMessage('Toque em Parar gravação antes de salvar.');return}
   if(!pendingBlob||!date||cents===null){showMessage('Confira a data e digite um valor maior que zero, como 85,90.');return}
@@ -162,9 +192,9 @@ function dictationStatus(message){$('dictation-status').textContent=message}
 function resetDictation(){dictationStarted=false;$('dictate').textContent='🎙️ Iniciar ditado';recognition=null}
 function clearAudio(){
   if(audioRecorder?.state==='recording')audioRecorder.stop();
-  audioStream?.getTracks().forEach(track=>track.stop());audioRecorder=null;audioStream=null;pendingAudio=null;
+  audioStream?.getTracks().forEach(track=>track.stop());audioRecorder=null;audioStream=null;pendingAudio=null;transcriptionPromise=null;
   if(audioURL)URL.revokeObjectURL(audioURL);audioURL=null;$('audio-preview').hidden=true;$('audio-preview').removeAttribute('src');
-  $('record-audio').textContent='🔴 Gravar áudio';$('audio-status').textContent='O áudio pode ser guardado junto com o comprovante caso a transcrição falhe.';
+  $('record-audio').textContent='🔴 Gravar e transcrever';$('audio-status').textContent='Grave sua fala e toque em Parar. A transcrição aparecerá na observação para conferência.';
 }
 $('record-audio').onclick=async()=>{
   if(audioRecorder?.state==='recording'){
@@ -177,7 +207,7 @@ $('record-audio').onclick=async()=>{
     const recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined),chunks=[];audioRecorder=recorder;pendingAudio=null;
     recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data)};
     recorder.onerror=()=>{$('audio-status').textContent='Falha na gravação. Tente novamente.';$('record-audio').disabled=false;stream.getTracks().forEach(track=>track.stop())};
-    recorder.onstop=()=>{stream.getTracks().forEach(track=>track.stop());if(audioRecorder!==recorder)return;pendingAudio=new Blob(chunks,{type:recorder.mimeType||'audio/mp4'});$('record-audio').disabled=false;if(!pendingAudio.size){pendingAudio=null;$('record-audio').textContent='🔴 Gravar áudio';$('audio-status').textContent='Nenhum áudio foi gravado. Tente novamente.';return}if(audioURL)URL.revokeObjectURL(audioURL);audioURL=URL.createObjectURL(pendingAudio);$('audio-preview').src=audioURL;$('audio-preview').hidden=false;$('record-audio').textContent='🔴 Gravar novamente';$('audio-status').textContent='Áudio pronto. Toque em Salvar JPG para guardar com o comprovante.'};
+    recorder.onstop=()=>{stream.getTracks().forEach(track=>track.stop());if(audioRecorder!==recorder)return;pendingAudio=new Blob(chunks,{type:recorder.mimeType||'audio/mp4'});if(!pendingAudio.size){pendingAudio=null;$('record-audio').disabled=false;$('record-audio').textContent='🔴 Gravar e transcrever';$('audio-status').textContent='Nenhum áudio foi gravado. Tente novamente.';return}if(audioURL)URL.revokeObjectURL(audioURL);audioURL=URL.createObjectURL(pendingAudio);$('audio-preview').src=audioURL;$('audio-preview').hidden=false;$('record-audio').textContent='🔴 Gravar novamente';$('audio-status').textContent='Áudio salvo nesta nota. Preparando transcrição…';const audio=pendingAudio;transcriptionPromise=transcribeAudio(audio,status=>{$('audio-status').textContent=status}).then(text=>{if(audioRecorder!==recorder)return;if(text){$('note').value=[$('note').value.trim(),text].filter(Boolean).join(' ');$('audio-status').textContent='Transcrição inserida na observação. Confira o texto antes de salvar.'}else $('audio-status').textContent='Nenhuma fala foi reconhecida. O áudio continua disponível para salvar.'}).catch(error=>{$('audio-status').textContent=`Não foi possível transcrever: ${error.message}. O áudio continua disponível para salvar.`}).finally(()=>{if(audioRecorder===recorder){transcriptionPromise=null;$('record-audio').disabled=false}})};
     recorder.start();$('record-audio').textContent='⏹️ Parar gravação';$('audio-status').textContent='Gravando áudio… toque em Parar gravação ao terminar.';
   }catch(error){audioStream?.getTracks().forEach(track=>track.stop());$('audio-status').textContent=error.name==='NotAllowedError'?'Permita o uso do microfone para gravar o áudio.':'Não foi possível iniciar a gravação de áudio.'}
 };
