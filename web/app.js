@@ -17,7 +17,7 @@ function parseReading(text){
   const lines=text.split(/\n/).map(line=>line.trim()).filter(Boolean), result={};
   const date=text.match(/\b(\d{2})[\/.\-](\d{2})[\/.\-](\d{4})\b/);
   if(date){const iso=`${date[3]}-${date[2]}-${date[1]}`,d=new Date(`${iso}T12:00:00`);if(!Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===iso)result.date=iso}
-  const merchant=lines.slice(0,8).find(line=>/[A-Za-zÀ-ú]{3}/.test(line)&&!/^(CNPJ|CPF|AV\.?|RUA|ENDEREÇO|DANFE|NFC|DOCUMENTO|EXTRATO)/i.test(line));
+  const merchant=lines.slice(0,10).find(line=>/[A-Za-zÀ-ú]{3}/.test(line)&&!/^(HOJE|ONTEM|COMPROVANTE|WHATSAPP|CNPJ|CPF|AV\.?|RUA|ENDEREÇO|DANFE|NFC|DOCUMENTO|EXTRATO)/i.test(line));
   if(merchant)result.merchant=merchant.slice(0,80);
   const states='AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO';
   for(let i=0;i<lines.length;i++){
@@ -46,7 +46,8 @@ async function recognize(blob,token){
     if(token!==readingToken||$('editor').hidden)return;
     const reading=parseReading(output.data.text);
     for(const field of Object.keys(edited))if(reading[field]&&!edited[field])$(field).value=reading[field];
-    $('ocr-status').textContent='Leitura concluída. Confira todos os campos na foto.';
+    const missing=['date','amount','merchant','region'].filter(field=>!reading[field]);
+    $('ocr-status').textContent=missing.length?'Leitura parcial. Complete e confira todos os campos pela foto.':'Leitura concluída. Confira todos os campos na foto.';
   }catch{if(token===readingToken)$('ocr-status').textContent='Leitura automática indisponível. Preencha os campos pela foto.'}
 }
 async function select(file){
@@ -91,10 +92,11 @@ async function zipMonth(items){
   const write=(view,pos,values)=>values.forEach(([size,value])=>{if(size===2)view.setUint16(pos,value,true);else view.setUint32(pos,value,true);pos+=size});
   for(const item of items){
     const blob=await annotatedJPG(item),bytes=new Uint8Array(await blob.arrayBuffer()),name=encoder.encode(filename(item)),crc=crc32(bytes);
+    const [year,month,day]=item.date.split('-').map(Number),dosDate=((Math.max(1980,Math.min(2107,year))-1980)<<9)|(month<<5)|day;
     const local=new Uint8Array(30+name.length),l=new DataView(local.buffer);
-    write(l,0,[[4,0x04034b50],[2,20],[2,0x0800],[2,0],[2,0],[2,0],[4,crc],[4,bytes.length],[4,bytes.length],[2,name.length],[2,0]]);local.set(name,30);parts.push(local,bytes);
+    write(l,0,[[4,0x04034b50],[2,20],[2,0x0800],[2,0],[2,dosDate],[4,crc],[4,bytes.length],[4,bytes.length],[2,name.length],[2,0]]);local.set(name,30);parts.push(local,bytes);
     const entry=new Uint8Array(46+name.length),c=new DataView(entry.buffer);
-    write(c,0,[[4,0x02014b50],[2,20],[2,20],[2,0x0800],[2,0],[2,0],[2,0],[4,crc],[4,bytes.length],[4,bytes.length],[2,name.length],[2,0],[2,0],[2,0],[2,0],[4,0],[4,offset]]);entry.set(name,46);central.push(entry);offset+=local.length+bytes.length;
+    write(c,0,[[4,0x02014b50],[2,20],[2,20],[2,0x0800],[2,0],[2,0],[2,dosDate],[4,crc],[4,bytes.length],[4,bytes.length],[2,name.length],[2,0],[2,0],[2,0],[2,0],[4,0],[4,offset]]);entry.set(name,46);central.push(entry);offset+=local.length+bytes.length;
   }
   const centralSize=central.reduce((sum,entry)=>sum+entry.length,0),end=new Uint8Array(22),e=new DataView(end.buffer);
   write(e,0,[[4,0x06054b50],[2,0],[2,0],[2,items.length],[2,items.length],[4,centralSize],[4,offset],[2,0]]);
