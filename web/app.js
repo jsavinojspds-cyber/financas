@@ -142,7 +142,7 @@ $('clear-filters').onclick=()=>{for(const id of filterIds)$(id).value='';render(
 function dictationStatus(message){$('dictation-status').textContent=message}
 function resetDictation(){dictationStarted=false;$('dictate').textContent='🎙️ Iniciar ditado';recognition=null}
 $('dictate').onclick=()=>{
-  if(dictationStarted){dictationStatus('Finalizando a transcrição…');$('dictate').disabled=true;recognition?.stop();return}
+  if(dictationStarted){const current=recognition;dictationStatus('Finalizando a transcrição…');$('dictate').disabled=true;current?.stop();setTimeout(()=>{if(recognition===current){dictationStatus(dictationHeard?'Ditado encerrado. Confira a transcrição na observação antes de salvar.':'Nenhuma fala foi transcrita. Tente no Safari ou use o microfone do teclado do iPhone.');current.abort();resetDictation();$('dictate').disabled=false}},5000);return}
   const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!Speech){dictationStatus('Ditado indisponível neste navegador. Use o microfone do teclado do iPhone na observação.');$('note').focus();return}
   try{
@@ -150,7 +150,7 @@ $('dictate').onclick=()=>{
     dictationBase=$('note').value.trim();dictationHeard=false;
     recognition.onresult=event=>{let transcript='';for(const result of event.results)transcript+=`${result[0].transcript.trim()} `;transcript=transcript.trim();if(transcript){dictationHeard=true;$('note').value=[dictationBase,transcript].filter(Boolean).join(' ');dictationStatus('Transcrição aparecendo na observação. Toque em Parar ditado ao terminar.')}};
     recognition.onerror=event=>{dictationStatus(event.error==='not-allowed'?'Permita o uso do microfone nas configurações do Safari.':'Não foi possível transcrever a fala. Use o microfone do teclado do iPhone na observação.')};
-    recognition.onend=()=>{if(!dictationHeard&&$('dictation-status').textContent==='Finalizando a transcrição…')dictationStatus('Nenhuma fala foi transcrita. Tente no Safari ou use o microfone do teclado do iPhone.');else if(dictationHeard)dictationStatus('Ditado encerrado. Confira a transcrição na observação antes de salvar.');resetDictation();$('dictate').disabled=false};
+    recognition.onend=()=>{if(!dictationHeard&&!$('dictation-status').textContent.startsWith('Permita')&&!$('dictation-status').textContent.startsWith('Não foi possível'))dictationStatus('Nenhuma fala foi transcrita. Tente no Safari ou use o microfone do teclado do iPhone.');else if(dictationHeard)dictationStatus('Ditado encerrado. Confira a transcrição na observação antes de salvar.');resetDictation();$('dictate').disabled=false};
     recognition.start();dictationStarted=true;$('dictate').textContent='⏹️ Parar ditado';dictationStatus('Ouvindo… fale agora e toque em Parar ditado ao terminar.');
   }catch{resetDictation();dictationStatus('Não foi possível iniciar o ditado. Use o microfone do teclado do iPhone.')}
 };
