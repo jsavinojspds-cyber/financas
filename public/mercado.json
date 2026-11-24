@@ -1,5 +1,5 @@
 {
-  "gerado_em": "2026-11-23T23:23:11.873Z",
+  "gerado_em": "2026-11-24T02:00:18.619Z",
   "indicadores": [
     {
       "id": "ibov",
@@ -14,6 +14,14 @@
       "valor": 3440.08,
       "variacao": -1.2906520978118028,
       "formato": "pontos"
+    },
+    {
+      "id": "selic",
+      "rotulo": "Selic",
+      "valor": 13.649989315282562,
+      "variacao": null,
+      "formato": "percent",
+      "nota": "a.a."
     },
     {
       "id": "cdi",
@@ -33,7 +41,6 @@
     }
   ],
   "falhas": [
-    "HTTP 429 em https://economia.awesomeapi.com.br/last/USD-BRL",
-    "fetch failed"
+    "HTTP 429 em https://economia.awesomeapi.com.br/last/USD-BRL"
   ]
 }
