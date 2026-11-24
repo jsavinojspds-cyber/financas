@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#17191d"><title>Calculadora Financeira 12C</title><style>
+:root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}body{margin:0;background:#111419;color:#eee;min-height:100vh;display:grid;place-items:center;padding:20px 12px}.shell{width:min(100%,510px);padding:24px 20px 23px;border-radius:24px;background:linear-gradient(150deg,#464a51,#25282f 48%,#16181d);box-shadow:0 20px 60px #0009,inset 0 2px 3px #fff3;border:1px solid #61646a}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;letter-spacing:3px;color:#d4c49e;font-weight:bold}.top small{font-size:11px;letter-spacing:1.5px;color:#adb2bd}.screen{border:8px solid #1a1b1f;background:linear-gradient(125deg,#c8d5b3,#a6b994);color:#222b20;min-height:106px;border-radius:8px;box-shadow:inset 0 3px 9px #38483055;margin:0 0 18px;padding:8px 12px;display:flex;flex-direction:column;justify-content:space-between}.indicators{font:12px monospace;opacity:.8;display:flex;justify-content:space-between}.digits{text-align:right;font:clamp(28px,8vw,42px) 'Courier New',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.keys{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.key{border:0;border-radius:8px;min-width:0;min-height:61px;background:linear-gradient(#323940,#181d23);box-shadow:inset 0 1px #ffffff44,0 3px 0 #0d0f12;color:#f3f2ed;font-weight:bold;font-size:20px;touch-action:manipulation;cursor:pointer}.key:active{transform:translateY(2px);box-shadow:inset 0 1px #ffffff22,0 1px 0 #080909}.key.finance{background:linear-gradient(#4b5159,#292e35);font-size:17px}.key.gold{background:linear-gradient(#ebbd68,#c28e3e);color:#24201a}.key.blue{background:linear-gradient(#6e98ac,#3d6276);color:#fff}.key.primary{background:linear-gradient(#777f86,#3e474f)}.key.small{font-size:15px}.help{margin-top:19px;color:#d0d2d5;font-size:12px;line-height:1.55}.help strong{color:#e8bd73}.status{margin-top:12px;min-height:18px;font-size:12px;color:#e6ce9b;text-align:center}.foot{font-size:11px;opacity:.65;text-align:center;margin-top:14px}.key:focus-visible{outline:2px solid #eebf65;outline-offset:3px}@media(max-width:390px){.shell{padding:17px 12px}.keys{gap:6px}.key{min-height:55px}.top{font-size:13px}}
+</style></head><body><main class="shell"><div class="top"><span>FINANCIAL 12C</span><small>RPN · WEB</small></div><div class="screen" aria-live="polite"><div class="indicators"><span id="mode">RPN · 2 casas</span><span id="shift"></span></div><div class="digits" id="display">0,00</div></div><div class="keys" id="keys"></div><div class="status" id="status">Pronta para calcular</div><div class="help"><strong>Uso rápido:</strong> digite um número, pressione ENTER, digite o próximo e selecione a operação. Para financiamentos, informe 4 das 5 variáveis n, i, PV, PMT e FV; toque em <strong>f</strong> e depois na quinta variável para calcular. A taxa i é percentual por período. Use CHS para trocar o sinal de entradas e fluxos. Pressione f seguido de 0–9 para ajustar as casas decimais.</div><div class="foot">Aplicativo independente, inspirado no funcionamento da HP 12C. Não afiliado à HP.</div></main><script>
+(()=>{'use strict';
+const layouts=[['n','i','PV','PMT','FV'],['f','g','STO','RCL','CLX'],['%','Δ%','1/x','√x','yˣ'],['7','8','9','÷','CHS'],['4','5','6','×','R↓'],['1','2','3','−','x↔y'],['0','.','ENTER','+','←']];
+const keys=document.querySelector('#keys'),display=document.querySelector('#display'),mode=document.querySelector('#mode'),shiftEl=document.querySelector('#shift'),status=document.querySelector('#status');
+let stack=[0,0,0,0],entry='',fresh=false,lift=true,shift='',memory=0,decimals=2,registers={n:0,i:0,PV:0,PMT:0,FV:0};
+const describe=s=>status.textContent=s;
+function fmt(x){if(!Number.isFinite(x))return 'Erro';return new Intl.NumberFormat('pt-BR',{minimumFractionDigits:decimals,maximumFractionDigits:decimals,useGrouping:false}).format(x)}
+function x(){return entry!==''?Number(entry):stack[0]}
+function sync(){display.textContent=fmt(x());mode.textContent='RPN · '+decimals+' casas';shiftEl.textContent=shift?shift+' ativo':''}
+function push(){stack=[stack[0],stack[0],stack[1],stack[2]]}
+function commit(){if(entry!==''){stack[0]=Number(entry);entry=''}}
+function digit(d){if(fresh){entry='';fresh=false}if(entry===''){if(lift)push();entry=d==='.'?'0.':d;lift=false}else if(d==='.'?!entry.includes('.'):entry.replace(/[-.]/g,'').length<12){entry+=d}sync()}
+function enter(){commit();push();fresh=true;lift=false;describe('ENTER');sync()}
+function unary(fn){commit();const v=fn(stack[0]);if(!Number.isFinite(v)){describe('Erro: operação inválida');return}stack[0]=v;lift=true;fresh=true;sync()}
+function binary(fn){commit();const val=fn(stack[1],stack[0]);if(!Number.isFinite(val)){describe('Erro: operação inválida');return}stack=[val,stack[2],stack[3],stack[3]];lift=true;fresh=true;sync()}
+function solveTVM(target){const p={...registers},N=Math.round(p.n),r=p.i/100;const factor=(n,rate)=>Math.abs(rate)<1e-12?n:Math.expm1(n*Math.log1p(rate))/rate;const fvFrom=rate=>p.PV*Math.pow(1+rate,N)+p.PMT*factor(N,rate);let out;
+if(target==='FV')out=-fvFrom(r);
+else if(target==='PV')out=-(p.FV+p.PMT*factor(N,r))/Math.pow(1+r,N);
+else if(target==='PMT')out=-(p.FV+p.PV*Math.pow(1+r,N))/factor(N,r);
+else if(target==='n'){if(p.i===0){out=-(p.PV+p.FV)/p.PMT}else{const a=p.PMT/r;out=Math.log((a-p.FV)/(p.PV+a))/Math.log1p(r)}}
+else if(target==='i'){
+const fn=rate=>{if(rate<=-1)return NaN;return p.PV*Math.pow(1+rate,N)+p.PMT*factor(N,rate)+p.FV};
+let a=-.999999,b=1,fa=fn(a),fb=fn(b);if(!Number.isFinite(fa)||!Number.isFinite(fb)||fa*fb>0){a=0;fa=fn(a);for(let k=0;k<20&&fa*fb>0;k++){b=b*2+1;fb=fn(b)}}
+if(!Number.isFinite(fa)||!Number.isFinite(fb)||fa*fb>0){describe('Sem solução de taxa neste intervalo');return}
+for(let k=0;k<150;k++){const mid=(a+b)/2,fm=fn(mid);if(!Number.isFinite(fm)){describe('Erro ao resolver taxa');return}if(fa*fm<=0){b=mid;fb=fm}else{a=mid;fa=fm}}out=(a+b)*50;
+}
+if(!Number.isFinite(out)){describe('Erro: verifique n, i e sinais dos fluxos');return}registers[target]=out;stack[0]=out;lift=true;fresh=true;describe(target+' calculado · sinais opostos para entradas/saídas');sync()}
+function command(k){if(/^[0-9.]$/.test(k)){if(shift==='f'&&/^[0-9]$/.test(k)){decimals=Number(k);shift='';describe('Exibindo '+decimals+' casas decimais');sync();return}digit(k);return}
+if(k==='f'||k==='g'){shift=shift===k?'':k;sync();return}
+if(k==='STO'){commit();memory=stack[0];describe('Valor salvo na memória');sync();return}
+if(k==='RCL'){stack[0]=memory;lift=true;fresh=true;describe('Memória recuperada');sync();return}
+if(k==='CLX'){entry='';stack[0]=0;fresh=true;lift=false;describe('Visor limpo');sync();return}
+if(k==='ENTER'){enter();return}
+if(k==='←'){if(entry!=='')entry=entry.slice(0,-1);else stack[0]=0;sync();return}
+if(k==='CHS'){if(entry!=='')entry=String(-Number(entry));else stack[0]=-stack[0];sync();return}
+if(k==='R↓'){commit();stack=[stack[1],stack[2],stack[3],stack[0]];lift=true;fresh=true;sync();return}
+if(k==='x↔y'){commit();[stack[0],stack[1]]=[stack[1],stack[0]];lift=true;fresh=true;sync();return}
+if(['n','i','PV','PMT','FV'].includes(k)){if(shift==='g'&&k==='n'){registers={n:0,i:0,PV:0,PMT:0,FV:0};shift='';describe('Registros financeiros limpos');sync();return}if(shift==='f'){shift='';solveTVM(k);return}commit();registers[k]=stack[0];lift=true;fresh=true;describe(k+' = '+fmt(stack[0])+' registrado · f + '+k+' calcula');sync();return}
+const ops={'+':(a,b)=>a+b,'−':(a,b)=>a-b,'×':(a,b)=>a*b,'÷':(a,b)=>a/b,'yˣ':(a,b)=>Math.pow(a,b),'%':(a,b)=>a*b/100,'Δ%':(a,b)=>(b-a)/a*100};
+if(k==='√x'){unary(Math.sqrt);shift='';return}if(k==='1/x'){unary(v=>1/v);shift='';return}if(ops[k]){binary(ops[k]);shift='';return}}
+layouts.flat().forEach(k=>{const b=document.createElement('button');b.type='button';b.className='key'+(['n','i','PV','PMT','FV'].includes(k)?' finance':'')+(k==='f'?' gold':'')+(k==='g'?' blue':'')+(k==='ENTER'?' primary small':'')+(k.length>3?' small':'');b.textContent=k;b.setAttribute('aria-label',k);b.addEventListener('click',()=>command(k));keys.appendChild(b)});
+document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;const map={'*':'×','/':'÷','-':'−',',':'.','Enter':'ENTER','Backspace':'←'};const key=map[e.key]||e.key;if(layouts.flat().includes(key)){e.preventDefault();command(key)}});sync();
+})();
+</script></body></html>
